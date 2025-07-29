@@ -10,13 +10,15 @@
     <div class="container">
         <h1>设备管理系统</h1>
         
-        <!-- 未登录状态：显示登录按钮 -->
-        <div id="loginSection">
-            <p>点击按钮同步最新设备数据</p>
-            <button class="sync-btn" onclick="syncDevices()">同步数据</button>
+        <!-- 加载状态 -->
+        <div id="loadingSection" style="display: none;">
+            正在加载设备信息...
         </div>
 
-        <!-- 设备列表（登录后显示） -->
+        <!-- 错误提示 -->
+        <div id="errorSection" class="error" style="display: none;"></div>
+
+        <!-- 设备列表（加载后显示） -->
         <div id="deviceListSection" style="display: none;">
             <h2>设备列表</h2>
             <div id="deviceList"></div>
@@ -47,6 +49,9 @@
                 <button type="button" class="cancel-btn" onclick="cancelEdit()">取消</button>
             </form>
         </div>
+
+        <!-- 手动触发同步按钮（测试用） -->
+        <button class="sync-btn" onclick="triggerManualSync()">手动同步数据</button>
     </div>
 
     <script src="script.js"></script>
