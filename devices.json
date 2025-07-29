@@ -1,0 +1,9 @@
+[
+  {
+    "id": "fridge_001",
+    "name": "厨房冰箱",
+    "location": "厨房A区",
+    "last_maintenance": "2024-06-01",
+    "notes": "制冷正常，滤网需更换"
+  }
+]
