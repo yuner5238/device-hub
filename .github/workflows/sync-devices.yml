@@ -1,0 +1,137 @@
+name: Sync Devices Data to GitHub
+
+# ------------------------------
+# 触发条件：代码推送或手动触发
+# ------------------------------
+on:
+  push:
+    branches:
+      - main  # 替换为你的主分支名称（如 master）
+  workflow_dispatch:  # 允许手动触发（通过 GitHub UI）
+    inputs:
+      sync-type:
+        description: '同步类型（自动/手动）'
+        required: false
+        default: 'manual'
+
+# ------------------------------
+# 工作流环境配置
+# ------------------------------
+jobs:
+  sync-devices:
+    runs-on: ubuntu-latest  # 使用 Ubuntu 环境
+    env:
+      # 从 GitHub Secrets 读取 Token（生产环境必选）
+      DEVICE_HUB_TOKEN: ${{ secrets.DEVICE_HUB_TOKEN }}
+      # 仓库信息（自动获取，无需手动修改）
+      GITHUB_REPO: ${{ github.repository }}
+      DEVICES_FILE: 'devices.json'  # 设备数据文件名（根目录）
+
+    steps:
+      # ------------------------------
+      # 步骤 1：检出仓库代码
+      # ------------------------------
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 拉取完整历史记录（防止文件权限丢失）
+
+      # ------------------------------
+      # 步骤 2：设置 Node.js 环境（可选，根据项目需求）
+      # ------------------------------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'  # 匹配你的项目 Node.js 版本
+
+      # ------------------------------
+      # 步骤 3：安装项目依赖（可选）
+      # ------------------------------
+      - name: Install Dependencies
+        run: npm ci  # 仅当项目需要 Node.js 依赖时启用
+
+      # ------------------------------
+      # 步骤 4：认证 GitHub API（关键！）
+      # ------------------------------
+      - name: Authenticate with GitHub API
+        run: |
+          # 配置 Git 全局用户（用于提交代码）
+          git config --global user.name "Device Hub Sync Bot"
+          git config --global user.email "sync-bot@device-hub.example.com"
+          
+          # 设置 GitHub API 认证（使用 PAT）
+          git remote set-url origin https://${{ env.DEVICE_HUB_TOKEN }}@github.com/${{ env.GITHUB_REPO }}.git
+
+      # ------------------------------
+      # 步骤 5：获取最新的 devices.json 内容
+      # ------------------------------
+      - name: Fetch Latest devices.json
+        id: fetch-file
+        run: |
+          # 使用 GitHub API 获取 devices.json 内容
+          RESPONSE=$(curl -s -H "Authorization: token $DEVICE_HUB_TOKEN" \
+                          https://api.github.com/repos/${{ env.GITHUB_REPO }}/contents/${{ env.DEVICES_FILE }})
+          
+          # 解析 JSON 响应（提取内容和 SHA）
+          FILE_CONTENT=$(echo "$RESPONSE" | jq -r '.content')
+          FILE_SHA=$(echo "$RESPONSE" | jq -r '.sha')
+          
+          # 如果文件不存在（首次运行），初始化空内容
+          if [ "$FILE_CONTENT" == "null" ] || [ -z "$FILE_CONTENT" ]; then
+            FILE_CONTENT="[]"
+            FILE_SHA=""
+          fi
+
+          # 输出到工作流变量（供后续步骤使用）
+          echo "file_content=$FILE_CONTENT" >> $GITHUB_OUTPUT
+          echo "file_sha=$FILE_SHA" >> $GITHUB_OUTPUT
+
+      # ------------------------------
+      # 步骤 6：合并前端提交的数据（自定义逻辑）
+      # ------------------------------
+      - name: Merge Frontend Data
+        id: merge-data
+        run: |
+          # 假设前端通过 GitHub API 提交了新数据（示例逻辑）
+          # 这里需要替换为你的实际数据合并逻辑（如读取本地临时文件）
+          NEW_DATA='[
+            {"id": "fridge_003", "name": "厨房冰箱3", "location": "厨房C区", "last_maintenance": "2024-06-01", "notes": "新设备"}
+          ]'
+          
+          # 合并新旧数据（示例：追加新设备）
+          MERGED_DATA=$(echo "$FILE_CONTENT" | jq ". + $NEW_DATA")
+          
+          # 输出合并后的内容（供后续步骤使用）
+          echo "merged_content=$MERGED_DATA" >> $GITHUB_OUTPUT
+
+      # ------------------------------
+      # 步骤 7：提交并推送更新后的 devices.json
+      # ------------------------------
+      - name: Commit and Push Changes
+        id: commit-push
+        run: |
+          # 如果无变更，跳过提交（避免空提交）
+          if [ "$FILE_CONTENT" == "$MERGED_DATA" ]; then
+            echo "无数据变更，跳过提交"
+            exit 0
+          fi
+
+          # 写入合并后的内容到本地文件
+          echo "$MERGED_DATA" > ${{ env.DEVICES_FILE }}
+
+          # 添加并提交更改
+          git add ${{ env.DEVICES_FILE }}
+          git commit -m "Sync devices: $(date +'%Y-%m-%d %H:%M:%S')" || exit 0  # 无变更时跳过
+
+          # 推送至 GitHub 仓库
+          git push origin main  # 替换为你的主分支名称
+
+      # ------------------------------
+      # 步骤 8：清理临时环境（可选）
+      # ------------------------------
+      - name: Cleanup
+        if: always()
+        run: |
+          # 重置 Git 配置（可选）
+          git config --global --unset user.name
+          git config --global --unset user.email
