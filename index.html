@@ -1,7 +1,117 @@
 <!DOCTYPE html>
 <html>
+<head>
+    <title>设备管理系统</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .device-card { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .edit-btn { background: #4CAF50; color: white; padding: 8px 16px; border: none; cursor: pointer; }
+        .form-group { margin: 10px 0; }
+        input, textarea { width: 100%; padding: 8px; margin-top: 5px; }
+    </style>
+</head>
 <body>
-<h1>Hello World</h1>
-<p>I'm hosted with GitHub Pages.</p>
+    <h1>设备管理系统</h1>
+    <div id="device-list"></div>
+
+    <script>
+        // 配置项（需替换为你的信息）
+        const GITHUB_REPO = 'yuner5238/device-hub'; // 你的仓库名（格式：用户名/仓库名）
+        const PAT = 'ghp_abc123...'; // 你的个人访问令牌（替换为实际值）
+        const DEVICES_FILE = 'devices.json'; // 数据文件名
+
+        // 获取设备列表
+        async function fetchDevices() {
+            const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${DEVICES_FILE}`;
+            const response = await fetch(url, {
+                headers: { 'Authorization': `token ${PAT}` }
+            });
+            const data = await response.json();
+            const content = atob(data.content); // 解码Base64内容
+            return JSON.parse(content);
+        }
+
+        // 保存修改后的设备列表
+        async function saveDevices(devices) {
+            const content = btoa(JSON.stringify(devices, null, 2)); // 转为Base64
+            const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${DEVICES_FILE}`;
+            await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${PAT}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: 'Update devices',
+                    content: content,
+                    sha: data.sha // 需从首次获取时保存的data中获取sha值（见下方说明）
+                })
+            });
+        }
+
+        // 渲染设备列表
+        async function renderDevices() {
+            const devices = await fetchDevices();
+            const list = document.getElementById('device-list');
+            list.innerHTML = devices.map(device => `
+                <div class="device-card">
+                    <h3>${device.name}</h3>
+                    <p>位置：${device.location}</p>
+                    <p>最后维护：${device.last_maintenance}</p>
+                    <p>备注：${device.notes}</p>
+                    <button class="edit-btn" onclick="editDevice('${device.id}')">编辑</button>
+                </div>
+            `).join('');
+        }
+
+        // 编辑设备（弹出表单）
+        let currentDevice = null;
+        function editDevice(id) {
+            currentDevice = devices.find(d => d.id === id);
+            const form = `
+                <h2>编辑设备：${currentDevice.name}</h2>
+                <form onsubmit="updateDevice(event)">
+                    <div class="form-group">
+                        <label>名称：</label>
+                        <input type="text" id="name" value="${currentDevice.name}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>位置：</label>
+                        <input type="text" id="location" value="${currentDevice.location}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>最后维护日期：</label>
+                        <input type="date" id="last_maintenance" value="${currentDevice.last_maintenance}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>备注：</label>
+                        <textarea id="notes">${currentDevice.notes}</textarea>
+                    </div>
+                    <button type="submit">保存</button>
+                </form>
+            `;
+            document.body.innerHTML += form;
+        }
+
+        // 提交修改
+        async function updateDevice(event) {
+            event.preventDefault();
+            currentDevice.name = document.getElementById('name').value;
+            currentDevice.location = document.getElementById('location').value;
+            currentDevice.last_maintenance = document.getElementById('last_maintenance').value;
+            currentDevice.notes = document.getElementById('notes').value;
+            
+            await saveDevices(devices); // 保存到GitHub
+            renderDevices(); // 刷新列表
+            alert('修改成功！');
+        }
+
+        // 初始化加载
+        let devices;
+        fetchDevices().then(data => {
+            devices = data;
+            renderDevices();
+        });
+    </script>
 </body>
 </html>
