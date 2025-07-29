@@ -1,7 +1,7 @@
-// 配置项（从 GitHub Secrets 获取，或硬编码测试）
+// 配置项
 const GITHUB_REPO = 'yuner5238/device-hub'; // 你的仓库名（格式：用户名/仓库名）
 const DEVICES_FILE = 'devices.json'; // 设备数据文件名
-const WEBHOOK_URL = 'https://api.github.com/repos/yuner5238/device-hub/dispatches'; // GitHub Webhook 地址
+const GITHUB_TOKEN = 'ghp_your_pat_here'; // 替换为你的 PAT（仅测试用，生产环境用 Secrets）
 
 // 全局变量
 let devices = []; // 存储设备数据
@@ -9,20 +9,24 @@ let currentEditId = null; // 当前编辑的设备 ID
 
 // 页面加载时初始化
 window.onload = async () => {
-    await syncDevices(); // 首次加载同步数据
+    await loadDevices(); // 首次加载设备数据
 };
 
 /**
- * 同步设备数据（从 GitHub 仓库拉取）
+ * 从 GitHub 仓库加载 devices.json 数据
  */
-async function syncDevices() {
+async function loadDevices() {
     try {
-        // 调用 GitHub API 获取 devices.json 内容（通过 GitHub Actions 触发）
-        const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DEVICES_FILE}`, {
-            headers: { 'Authorization': `token ${await getGitHubToken()}` }
-        });
+        document.getElementById('loadingSection').style.display = 'block';
+        document.getElementById('errorSection').style.display = 'none';
 
-        if (!response.ok) throw new Error('同步失败：' + response.statusText);
+        // 调用 GitHub API 获取 devices.json 内容
+        const response = await fetch(
+            `https://api.github.com/repos/${GITHUB_REPO}/contents/${DEVICES_FILE}`,
+            { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } }
+        );
+
+        if (!response.ok) throw new Error('加载失败：' + response.statusText);
         
         // 解析 Base64 内容
         const data = await response.json();
@@ -30,10 +34,11 @@ async function syncDevices() {
         
         // 渲染设备列表
         renderDevices();
-        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('loadingSection').style.display = 'none';
         document.getElementById('deviceListSection').style.display = 'block';
     } catch (error) {
-        showError('同步失败：' + error.message);
+        document.getElementById('errorSection').textContent = '加载失败：' + error.message;
+        document.getElementById('errorSection').style.display = 'block';
     }
 }
 
@@ -77,7 +82,7 @@ function startEdit(deviceId) {
 }
 
 /**
- * 保存设备修改（触发 GitHub Actions 工作流）
+ * 保存设备修改（触发 GitHub 推送）
  */
 async function saveDevice(event) {
     event.preventDefault();
@@ -90,25 +95,63 @@ async function saveDevice(event) {
             notes: document.getElementById('edit-notes').value
         };
 
-        // 调用 GitHub Actions 触发更新（通过 Webhook）
-        const response = await fetch(WEBHOOK_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `token ${await getGitHubToken()}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                event_type: 'update_devices',
-                client_payload: { devices: devices } // 传递最新设备数据
-            })
-        });
+        // 更新本地设备数据
+        const index = devices.findIndex(d => d.id === updatedDevice.id);
+        devices[index] = updatedDevice;
 
-        if (!response.ok) throw new Error('保存失败：' + response.statusText);
-        
-        alert('设备信息已提交，等待同步...');
+        // 将更新后的数据写入 GitHub 仓库（触发 Pushes 事件）
+        await pushDevicesToGitHub();
+
+        // 刷新页面数据
+        await loadDevices();
         cancelEdit();
     } catch (error) {
         showError('保存失败：' + error.message);
+    }
+}
+
+/**
+ * 将设备数据推送到 GitHub 仓库（触发 Pushes 事件）
+ */
+async function pushDevicesToGitHub() {
+    try {
+        // 获取原文件的 SHA 值（首次推送无需 SHA）
+        let sha = '';
+        try {
+            const response = await fetch(
+                `https://api.github.com/repos/${GITHUB_REPO}/contents/${DEVICES_FILE}`,
+                { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } }
+            );
+            const data = await response.json();
+            sha = data.sha;
+        } catch (error) {
+            // 首次推送，无 SHA，忽略错误
+        }
+
+        // 将设备数据编码为 Base64
+        const content = Buffer.from(JSON.stringify(devices, null, 2)).toString('base64');
+
+        // 调用 GitHub API 推送文件
+        const response = await fetch(
+            `https://api.github.com/repos/${GITHUB_REPO}/contents/${DEVICES_FILE}`,
+            {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${GITHUB_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: '前端更新设备数据',
+                    content: content,
+                    sha: sha // 首次推送无需 SHA
+                })
+            }
+        );
+
+        if (!response.ok) throw new Error('推送失败：' + response.statusText);
+        return true;
+    } catch (error) {
+        throw new Error('推送失败：' + error.message);
     }
 }
 
@@ -121,17 +164,17 @@ function cancelEdit() {
 }
 
 /**
- * 显示错误提示
+ * 手动触发同步（测试用）
  */
-function showError(message) {
-    alert(message);
+async function triggerManualSync() {
+    await loadDevices(); // 重新加载数据（模拟同步）
+    alert('数据已手动同步！');
 }
 
 /**
- * 获取 GitHub Token（从 GitHub Secrets 或环境变量）
+ * 显示错误提示
  */
-async function getGitHubToken() {
-    // 实际生产环境中，Token 应存储在 GitHub Secrets 中，通过后端服务获取
-    // 此处为测试，直接返回硬编码的 Token（仅用于本地调试）
-    return 'ghp_your_pat_here'; // 替换为你的 PAT
+function showError(message) {
+    document.getElementById('errorSection').textContent = message;
+    document.getElementById('errorSection').style.display = 'block';
 }
