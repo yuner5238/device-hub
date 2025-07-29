@@ -1,7 +1,7 @@
 // 配置项
 const GITHUB_REPO = 'yuner5238/device-hub'; // 你的仓库名（格式：用户名/仓库名）
 const DEVICES_FILE = 'devices.json'; // 设备数据文件名
-const GITHUB_TOKEN = 'ghp_your_pat_here'; // 替换为你的 PAT（仅测试用，生产环境用 Secrets）
+const GITHUB_TOKEN = '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'; // 替换为你的 PAT（仅测试用，生产环境用 Secrets）
 
 // 全局变量
 let devices = []; // 存储设备数据
