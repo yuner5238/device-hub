@@ -1,117 +1,367 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>设备管理系统</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .device-card { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px; }
-        .edit-btn { background: #4CAF50; color: white; padding: 8px 16px; border: none; cursor: pointer; }
-        .form-group { margin: 10px 0; }
-        input, textarea { width: 100%; padding: 8px; margin-top: 5px; }
+        /* 基础样式 */
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .login-btn {
+            background: #24292e;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .login-btn:hover {
+            background: #0366d6;
+        }
+
+        .device-card {
+            background: #fff;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .device-card h3 {
+            margin: 0 0 1rem 0;
+            color: #24292e;
+        }
+
+        .device-card p {
+            margin: 0.5rem 0;
+            color: #586069;
+            font-size: 0.95rem;
+        }
+
+        .edit-form {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f6f8fa;
+            border-radius: 6px;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #24292e;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d1d5da;
+            border-radius: 4px;
+            font-size: 0.95rem;
+        }
+
+        .save-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .save-btn:hover {
+            background: #218838;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #586069;
+        }
+
+        .error {
+            color: #dc3545;
+            padding: 1rem;
+            background: #ffeef0;
+            border-radius: 6px;
+            margin: 1rem 0;
+        }
     </style>
 </head>
 <body>
-    <h1>设备管理系统</h1>
-    <div id="device-list"></div>
+    <div class="container">
+        <h1>设备管理系统</h1>
+        
+        <!-- 未登录状态：显示登录按钮 -->
+        <div id="loginSection">
+            <p>请登录 GitHub 以管理设备信息</p>
+            <button class="login-btn" onclick="loginWithGitHub()">使用 GitHub 登录</button>
+        </div>
+
+        <!-- 加载状态 -->
+        <div id="loadingSection" class="loading" style="display: none;">
+            正在加载设备信息...
+        </div>
+
+        <!-- 错误提示 -->
+        <div id="errorSection" class="error" style="display: none;"></div>
+
+        <!-- 设备列表（登录后显示） -->
+        <div id="deviceListSection" style="display: none;">
+            <!-- 设备卡片将通过 JavaScript 动态插入 -->
+        </div>
+    </div>
 
     <script>
-        // 配置项（需替换为你的信息）
+        // ---------------------- 配置项 ----------------------
         const GITHUB_REPO = 'yuner5238/device-hub'; // 你的仓库名（格式：用户名/仓库名）
-        const PAT = 'ghp_abc123...'; // 你的个人访问令牌（替换为实际值）
-        const DEVICES_FILE = 'devices.json'; // 数据文件名
+        const DEVICES_FILE = 'devices.json'; // 设备数据文件名
+        const CLIENT_ID = 'Ov23liEhpwdvWWKEPGXo'; // 替换为你的 GitHub OAuth Client ID
+        const REDIRECT_URI = encodeURIComponent('https://yuner5238.github.io/device-hub/auth'); // 回调地址（需与 GitHub OAuth 应用设置一致）
+        const SCOPES = 'repo'; // 需要的权限范围（根据需求调整，如仅 'read:user'）
 
-        // 获取设备列表
-        async function fetchDevices() {
-            const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${DEVICES_FILE}`;
-            const response = await fetch(url, {
-                headers: { 'Authorization': `token ${PAT}` }
-            });
-            const data = await response.json();
-            const content = atob(data.content); // 解码Base64内容
-            return JSON.parse(content);
+        // ---------------------- 状态变量 ----------------------
+        let currentUserToken = null; // 当前用户访问令牌
+        let currentDevice = null; // 当前编辑的设备
+
+        // ---------------------- 初始化 ----------------------
+        window.onload = async () => {
+            // 检查是否已登录（本地存储有令牌）
+            const storedToken = localStorage.getItem('githubToken');
+            if (storedToken) {
+                currentUserToken = storedToken;
+                showDeviceList(); // 直接加载设备列表
+            }
+        };
+
+        // ---------------------- 核心功能 ----------------------
+        /**
+         * 跳转到 GitHub 授权页面
+         */
+        async function loginWithGitHub() {
+            try {
+                const authUrl = `https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=${SCOPES}`;
+                window.location.href = authUrl;
+            } catch (error) {
+                showError('登录失败：' + error.message);
+            }
         }
 
-        // 保存修改后的设备列表
-        async function saveDevices(devices) {
-            const content = btoa(JSON.stringify(devices, null, 2)); // 转为Base64
-            const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${DEVICES_FILE}`;
-            await fetch(url, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `token ${PAT}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: 'Update devices',
-                    content: content,
-                    sha: data.sha // 需从首次获取时保存的data中获取sha值（见下方说明）
-                })
-            });
+        /**
+         * 处理 GitHub 授权回调（需部署在 REDIRECT_URI 地址）
+         */
+        async function handleAuthCallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            if (!code) {
+                showError('授权失败：未获取到授权码');
+                return;
+            }
+
+            try {
+                // 注意：此处需通过后端服务中转换取令牌（前端直接暴露 Client Secret 不安全！）
+                // 以下为示例代码，实际需替换为你的 Serverless 函数地址
+                const response = await fetch('https://your-serverless-function-url/exchange-token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, clientId: CLIENT_ID, redirectUri: REDIRECT_URI })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                
+                // 存储用户令牌并跳转回主页面
+                localStorage.setItem('githubToken', data.accessToken);
+                window.location.href = '/';
+            } catch (error) {
+                showError('授权失败：' + error.message);
+            }
         }
 
-        // 渲染设备列表
-        async function renderDevices() {
-            const devices = await fetchDevices();
-            const list = document.getElementById('device-list');
-            list.innerHTML = devices.map(device => `
-                <div class="device-card">
+        /**
+         * 显示设备列表
+         */
+        async function showDeviceList() {
+            try {
+                showLoading();
+                hideError();
+
+                // 使用用户令牌获取设备数据
+                const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DEVICES_FILE}`, {
+                    headers: { 'Authorization': `token ${currentUserToken}` }
+                });
+
+                if (!response.ok) throw new Error('无权限访问设备数据');
+                
+                const data = await response.json();
+                const content = atob(data.content); // 解码 Base64
+                const devices = JSON.parse(content);
+
+                // 渲染设备卡片
+                renderDevices(devices);
+                hideLoading();
+                document.getElementById('deviceListSection').style.display = 'block';
+            } catch (error) {
+                showError('加载设备失败：' + error.message);
+                hideLoading();
+            }
+        }
+
+        /**
+         * 渲染设备卡片列表
+         */
+        function renderDevices(devices) {
+            const container = document.getElementById('deviceListSection');
+            container.innerHTML = devices.map(device => `
+                <div class="device-card" data-id="${device.id}">
                     <h3>${device.name}</h3>
                     <p>位置：${device.location}</p>
                     <p>最后维护：${device.last_maintenance}</p>
                     <p>备注：${device.notes}</p>
-                    <button class="edit-btn" onclick="editDevice('${device.id}')">编辑</button>
+                    <button class="edit-btn" onclick="startEdit('${device.id}')">编辑</button>
                 </div>
             `).join('');
         }
 
-        // 编辑设备（弹出表单）
-        let currentDevice = null;
-        function editDevice(id) {
-            currentDevice = devices.find(d => d.id === id);
-            const form = `
-                <h2>编辑设备：${currentDevice.name}</h2>
-                <form onsubmit="updateDevice(event)">
+        /**
+         * 开始编辑设备
+         */
+        function startEdit(deviceId) {
+            const devices = JSON.parse(localStorage.getItem('devicesCache') || '[]');
+            currentDevice = devices.find(d => d.id === deviceId);
+            
+            if (!currentDevice) {
+                showError('设备数据丢失');
+                return;
+            }
+
+            // 显示编辑表单（替换原设备卡片）
+            const card = document.querySelector(`[data-id="${deviceId}"]`);
+            card.innerHTML = `
+                <h3>编辑设备：${currentDevice.name}</h3>
+                <form class="edit-form" onsubmit="saveDevice(event)">
                     <div class="form-group">
-                        <label>名称：</label>
-                        <input type="text" id="name" value="${currentDevice.name}" required>
+                        <label>设备名称：</label>
+                        <input type="text" id="edit-name" value="${currentDevice.name}" required>
                     </div>
                     <div class="form-group">
                         <label>位置：</label>
-                        <input type="text" id="location" value="${currentDevice.location}" required>
+                        <input type="text" id="edit-location" value="${currentDevice.location}" required>
                     </div>
                     <div class="form-group">
                         <label>最后维护日期：</label>
-                        <input type="date" id="last_maintenance" value="${currentDevice.last_maintenance}" required>
+                        <input type="date" id="edit-last-maintenance" value="${currentDevice.last_maintenance}" required>
                     </div>
                     <div class="form-group">
                         <label>备注：</label>
-                        <textarea id="notes">${currentDevice.notes}</textarea>
+                        <textarea id="edit-notes">${currentDevice.notes}</textarea>
                     </div>
-                    <button type="submit">保存</button>
+                    <button type="submit" class="save-btn">保存修改</button>
+                    <button type="button" class="login-btn" onclick="cancelEdit()">取消</button>
                 </form>
             `;
-            document.body.innerHTML += form;
         }
 
-        // 提交修改
-        async function updateDevice(event) {
+        /**
+         * 保存设备修改
+         */
+        async function saveDevice(event) {
             event.preventDefault();
-            currentDevice.name = document.getElementById('name').value;
-            currentDevice.location = document.getElementById('location').value;
-            currentDevice.last_maintenance = document.getElementById('last_maintenance').value;
-            currentDevice.notes = document.getElementById('notes').value;
-            
-            await saveDevices(devices); // 保存到GitHub
-            renderDevices(); // 刷新列表
-            alert('修改成功！');
+            try {
+                showLoading();
+                hideError();
+
+                // 获取表单数据
+                const updatedDevice = {
+                    id: currentDevice.id,
+                    name: document.getElementById('edit-name').value,
+                    location: document.getElementById('edit-location').value,
+                    last_maintenance: document.getElementById('edit-last-maintenance').value,
+                    notes: document.getElementById('edit-notes').value
+                };
+
+                // 更新本地缓存
+                const devices = JSON.parse(localStorage.getItem('devicesCache') || '[]');
+                const index = devices.findIndex(d => d.id === currentDevice.id);
+                devices[index] = updatedDevice;
+                localStorage.setItem('devicesCache', JSON.stringify(devices));
+
+                // 提交到 GitHub 仓库
+                const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DEVICES_FILE}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${currentUserToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: 'Update device info via Device Hub',
+                        content: btoa(JSON.stringify(devices, null, 2)), // 编码为 Base64
+                        sha: data.sha // 需从首次获取时保存的 SHA 值（需调整代码）
+                    })
+                });
+
+                if (!response.ok) throw new Error('保存失败：GitHub API 返回错误');
+                
+                // 刷新设备列表
+                await showDeviceList();
+                cancelEdit();
+            } catch (error) {
+                showError('保存失败：' + error.message);
+                hideLoading();
+            }
         }
 
-        // 初始化加载
-        let devices;
-        fetchDevices().then(data => {
-            devices = data;
-            renderDevices();
-        });
+        /**
+         * 取消编辑
+         */
+        function cancelEdit() {
+            showDeviceList();
+        }
+
+        // ---------------------- 辅助函数 ----------------------
+        function showLoading() {
+            document.getElementById('loadingSection').style.display = 'block';
+            document.getElementById('deviceListSection').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingSection').style.display = 'none';
+        }
+
+        function showError(message) {
+            const errorSection = document.getElementById('errorSection');
+            errorSection.textContent = message;
+            errorSection.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorSection').style.display = 'none';
+        }
     </script>
 </body>
 </html>
