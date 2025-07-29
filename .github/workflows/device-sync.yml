@@ -1,12 +1,11 @@
-name: Device Data Sync
+name: Sync Devices on Push
 
 on:
-  # 触发条件：Webhook 接收自定义事件
-  repository_dispatch:
-    types: [update_devices]  # 自定义事件类型（与前端触发的一致）
+  push:
+    branches: [main]  # 仅当 main 分支有推送时触发
 
 jobs:
-  sync-data:
+  sync:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -17,7 +16,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Read devices.json
+      - name: Read devices.json（可选）
         id: read-file
         run: |
           # 读取本地 devices.json（初始为空，首次运行时需手动创建）
@@ -30,7 +29,7 @@ jobs:
       - name: Update devices.json（示例逻辑）
         run: |
           # 这里可以添加自定义逻辑（如验证数据、生成新内容）
-          # 示例：将前端传递的 devices 数据写入文件
+          # 示例：将前端传递的设备数据写入文件（需结合前端逻辑）
           echo '${{ github.event.client_payload.devices }}' > devices.json
 
       - name: Commit and push changes
