@@ -1,14 +1,24 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>设备详情</title>
 </head>
 <body>
-  <h2 id="name">加载中...</h2>
-  <div id="info">正在加载设备信息...</div>
+  <h1 id="deviceName">设备名称</h1>
+  <p><strong>位置:</strong> <span id="deviceLocation"></span></p>
+  <p><strong>上次维护:</strong> <span id="deviceMaintenance"></span></p>
+  <p><strong>备注:</strong> <span id="deviceNotes"></span></p>
 
-  <!-- ✅ 确保路径是正确的：js/device.js -->
+  <hr />
+
+  <h2>编辑信息（需密码）</h2>
+  <input type="password" id="inputEditPassword" placeholder="请输入密码" />
+  <br /><br />
+  <label>位置: <input type="text" id="editLocation" /></label><br /><br />
+  <label>备注: <textarea id="editNotes" rows="4" cols="30"></textarea></label><br /><br />
+  <button id="btnSaveDeviceInfo">保存</button>
+
   <script src="js/device.js"></script>
 </body>
 </html>
