@@ -35,7 +35,7 @@ async function submitDeviceUpdateToGitHub(deviceId, updatedData) {
   const GITHUB_REPO = "device-hub";
   const FILE_PATH = "devices.json";
   const BRANCH_PREFIX = "devicehub/update-";
-  const TOKEN = "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"; // 请用安全方式管理
+  const TOKEN = "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i"; // 请用安全方式管理
 
   if (!TOKEN || TOKEN.includes("xxxxx")) {
     alert("GitHub Token 未配置，无法提交数据。");
