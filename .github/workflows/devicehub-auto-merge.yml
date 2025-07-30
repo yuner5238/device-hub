@@ -1,19 +1,24 @@
-name: DeviceHub Auto Merge PRs
+name: Auto Merge DeviceHub PRs
 
-# 监听 Pull Request 创建或更新事件
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened]
 
 jobs:
   auto-merge:
+    if: startsWith(github.head_ref, 'devicehub/update-')
     runs-on: ubuntu-latest
     steps:
-      - name: 自动合并符合条件的 PR
-        uses: pascalgn/automerge-action@v0.15.4
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Auto approve
+        uses: hmarr/auto-approve-action@v3
         with:
-          github_token: ${{ secrets.DEVICEHUB_GH_PAT }}
-          merge_method: squash
-          approve: true
-          # 只自动合并标题含“DeviceHub: Update device”的 PR
-          title_contains: "DeviceHub: Update device"
+          github-token: ${{ secrets.DEVICEHUB_GH_PAT }}
+
+      - name: Auto merge PR
+        uses: pascalgn/automerge-action@v0.15.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.DEVICEHUB_GH_PAT }}
+          MERGE_METHOD: squash
