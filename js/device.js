@@ -1,86 +1,90 @@
-async function submitDeviceUpdateToGitHub(deviceId, updatedData) {
-  const GITHUB_OWNER = "yuner5238";
-  const GITHUB_REPO = "device-hub";
-  const FILE_PATH = "devices.json";
-  const BRANCH_PREFIX = "devicehub/update-";
-  const TOKEN = "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"; // ✅ 用真实 PAT 或通过 GitHub Actions 方式安全传递
-
-  if (!TOKEN || TOKEN.includes("xxxxx")) {
-    alert("GitHub Token 未配置，无法提交数据。");
-    return;
-  }
-
-  const apiBase = "https://api.github.com";
-  const headers = {
-    Authorization: `token ${TOKEN}`,
-    Accept: "application/vnd.github+json",
-  };
-
-  // 1. 获取文件内容（包含 sha）
-  const fileRes = await fetch(`${apiBase}/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${FILE_PATH}?ref=main`, {
-    headers,
-  });
-
-  if (!fileRes.ok) {
-    alert("无法读取设备数据文件");
-    return;
-  }
-
-  const fileData = await fileRes.json();
-  const content = atob(fileData.content);
-  const devices = JSON.parse(content);
-
-  // 2. 修改指定设备
-  const deviceIndex = devices.findIndex((d) => d.id === deviceId);
-  if (deviceIndex === -1) {
-    alert("找不到设备 ID");
-    return;
-  }
-
-  devices[deviceIndex] = { ...devices[deviceIndex], ...updatedData };
-
-  // 3. 创建新分支
-  const branchName = `${BRANCH_PREFIX}${deviceId}-${Date.now()}`;
-  const refRes = await fetch(`${apiBase}/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/refs/heads/main`, {
-    headers,
-  });
-
-  const refData = await refRes.json();
-  const baseSha = refData.object.sha;
-
-  await fetch(`${apiBase}/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/refs`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      ref: `refs/heads/${branchName}`,
-      sha: baseSha,
-    }),
-  });
-
-  // 4. 提交更新到新分支
-  const newContent = btoa(JSON.stringify(devices, null, 2));
-  await fetch(`${apiBase}/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${FILE_PATH}`, {
-    method: "PUT",
-    headers,
-    body: JSON.stringify({
-      message: `Update device ${deviceId}`,
-      content: newContent,
-      branch: branchName,
-      sha: fileData.sha,
-    }),
-  });
-
-  // 5. 创建 Pull Request
-  await fetch(`${apiBase}/repos/${GITHUB_OWNER}/${GITHUB_REPO}/pulls`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      title: `Update ${deviceId}`,
-      head: branchName,
-      base: "main",
-      body: `自动更新设备 ${deviceId} 的信息`,
-    }),
-  });
-
-  alert("已提交更新请求，等待 GitHub 自动合并...");
+// 模拟当前设备ID获取函数（根据实际情况修改）
+function getCurrentDeviceId() {
+  // 假设从 URL 参数获取 deviceId，例如 device.html?device=fridge_001
+  const params = new URLSearchParams(window.location.search);
+  return params.get("device") || null;
 }
+
+// 页面初始化 - 显示设备信息（演示，实际你可能从 JSON 加载）
+async function loadDeviceInfo() {
+  const deviceId = getCurrentDeviceId();
+  if (!deviceId) {
+    alert("设备ID缺失，无法加载");
+    return;
+  }
+
+  const res = await fetch("devices.json");
+  const devices = await res.json();
+  const device = devices.find(d => d.id === deviceId);
+  if (!device) {
+    alert("找不到该设备信息");
+    return;
+  }
+
+  document.getElementById("deviceName").textContent = device.name;
+  document.getElementById("deviceLocation").textContent = device.location;
+  document.getElementById("deviceMaintenance").textContent = device.last_maintenance;
+  document.getElementById("deviceNotes").textContent = device.notes;
+
+  document.getElementById("editLocation").value = device.location;
+  document.getElementById("editNotes").value = device.notes;
+}
+
+// 显示/隐藏编辑状态
+function toggleEditMode(isEdit) {
+  document.querySelectorAll(".edit-field").forEach(el => {
+    el.style.display = isEdit ? "block" : "none";
+  });
+  document.querySelectorAll(".view-field").forEach(el => {
+    el.style.display = isEdit ? "none" : "block";
+  });
+  document.getElementById("btnEdit").style.display = isEdit ? "none" : "inline-block";
+  document.getElementById("btnSaveDeviceInfo").style.display = isEdit ? "inline-block" : "none";
+  document.getElementById("issueInfo").style.display = "none";
+}
+
+function generateIssueContent(deviceId, updatedData) {
+  const title = `Update Device ${deviceId}`;
+  const body = JSON.stringify(updatedData, null, 2);
+  return { title, body };
+}
+
+// 点击保存，生成 Issue 内容展示给用户复制
+function onSaveDeviceInfo() {
+  const deviceId = getCurrentDeviceId();
+  if (!deviceId) {
+    alert("设备ID缺失");
+    return;
+  }
+
+  const location = document.getElementById("editLocation").value.trim();
+  const notes = document.getElementById("editNotes").value.trim();
+
+  const updatedData = {};
+  if(location) updatedData.location = location;
+  if(notes) updatedData.notes = notes;
+
+  if (Object.keys(updatedData).length === 0) {
+    alert("没有修改内容");
+    return;
+  }
+
+  const { title, body } = generateIssueContent(deviceId, updatedData);
+  const issueText = `请复制以下内容，去 GitHub 仓库新建一个 Issue 来提交修改：\n\n标题：${title}\n\n内容：\n${body}`;
+
+  const issueInfo = document.getElementById("issueInfo");
+  issueInfo.textContent = issueText;
+  issueInfo.style.display = "block";
+
+  toggleEditMode(false);
+}
+
+document.getElementById("btnEdit").addEventListener("click", () => {
+  toggleEditMode(true);
+});
+
+document.getElementById("btnSaveDeviceInfo").addEventListener("click", () => {
+  onSaveDeviceInfo();
+});
+
+window.onload = loadDeviceInfo;
