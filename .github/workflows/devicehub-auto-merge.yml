@@ -1,70 +1,115 @@
-# .github/workflows/device-update.yml
-name: Update Device From Issue
+name: Update Devices From Issue
 
 on:
   issues:
     types: [opened]
 
 jobs:
-  process-update:
-    if: startsWith(github.event.issue.title, 'Update Device ')
+  update-device:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Parse issue body and update devices.json
-        run: |
-          echo "Parsing issue to update device info..."
-          deviceId=$(echo "${{ github.event.issue.title }}" | cut -d ' ' -f 3)
-          echo "Device ID: $deviceId"
-          
-          # 将 issue body 内容写入 update.json 临时文件
-          echo "${{ github.event.issue.body }}" > update.json
-          
-          # Python 脚本处理 JSON 修改 devices.json
-          python3 <<EOF
-import json
-
-device_id = "$deviceId"
-with open("devices.json", "r", encoding="utf-8") as f:
-    devices = json.load(f)
-with open("update.json", "r", encoding="utf-8") as f:
-    update_data = json.load(f)
-
-for i, d in enumerate(devices):
-    if d['id'] == device_id:
-        devices[i].update(update_data)
-        break
-else:
-    print("Device ID not found.")
-    exit(1)
-
-with open("devices.json", "w", encoding="utf-8") as f:
-    json.dump(devices, f, indent=2, ensure_ascii=False)
-EOF
-
-      - name: Create branch and commit
-        id: commit_changes
-        run: |
-          branch="devicehub/update-${{ github.event.issue.number }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b $branch
-          git add devices.json
-          git commit -m "Update device from issue #${{ github.event.issue.number }}"
-          git push origin $branch
-          echo "::set-output name=branch::$branch"
-
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
+      - name: Parse issue and update devices.json
+        uses: actions/github-script@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ steps.commit_changes.outputs.branch }}
-          title: "Update device from issue #${{ github.event.issue.number }}"
-          body: "自动更新设备信息，来源 Issue #${{ github.event.issue.number }}"
+          script: |
+            const issueTitle = context.payload.issue.title;
+            const issueBody = context.payload.issue.body;
+            const issueNumber = context.payload.issue.number;
 
-      - name: Close issue
-        uses: peter-evans/close-issue@v2
-        with:
-          issue-number: ${{ github.event.issue.number }}
+            if (!issueTitle.startsWith("Update Device ")) {
+              console.log("Not a device update issue, skipping.");
+              return;
+            }
+
+            const deviceId = issueTitle.replace("Update Device ", "").trim();
+
+            let updatedData;
+            try {
+              updatedData = JSON.parse(issueBody);
+            } catch (e) {
+              await github.issues.createComment({
+                ...context.repo,
+                issue_number: issueNumber,
+                body: "❌ Issue 内容不是有效的 JSON，请检查格式后重新提交。"
+              });
+              return;
+            }
+
+            const fs = require('fs');
+            const path = require('path');
+
+            const devicesPath = path.join(process.cwd(), 'devices.json');
+            const devicesContent = fs.readFileSync(devicesPath, 'utf8');
+            const devices = JSON.parse(devicesContent);
+
+            const deviceIndex = devices.findIndex(d => d.id === deviceId);
+            if (deviceIndex === -1) {
+              await github.issues.createComment({
+                ...context.repo,
+                issue_number: issueNumber,
+                body: `❌ 找不到设备 ID: ${deviceId}`
+              });
+              return;
+            }
+
+            // 更新设备数据
+            devices[deviceIndex] = {...devices[deviceIndex], ...updatedData};
+
+            // 写回文件
+            fs.writeFileSync(devicesPath, JSON.stringify(devices, null, 2), 'utf8');
+
+            // 创建新分支
+            const branchName = `devicehub/update-${deviceId}-${Date.now()}`;
+            const baseRef = 'refs/heads/main';
+
+            // 获取主分支 SHA
+            const { data: refData } = await github.git.getRef({
+              ...context.repo,
+              ref: baseRef,
+            });
+
+            // 创建新分支
+            await github.git.createRef({
+              ...context.repo,
+              ref: `refs/heads/${branchName}`,
+              sha: refData.object.sha,
+            });
+
+            // 读取文件内容编码base64
+            const contentEncoded = Buffer.from(JSON.stringify(devices, null, 2)).toString('base64');
+
+            // 获取文件 SHA
+            const { data: fileData } = await github.repos.getContent({
+              ...context.repo,
+              path: 'devices.json',
+              ref: 'main',
+            });
+
+            // 更新文件到新分支
+            await github.repos.createOrUpdateFileContents({
+              ...context.repo,
+              path: 'devices.json',
+              message: `Update device ${deviceId} via Issue #${issueNumber}`,
+              content: contentEncoded,
+              branch: branchName,
+              sha: fileData.sha,
+            });
+
+            // 创建 Pull Request
+            const { data: pr } = await github.pulls.create({
+              ...context.repo,
+              title: `Update device ${deviceId} from Issue #${issueNumber}`,
+              head: branchName,
+              base: 'main',
+              body: `自动更新设备 ${deviceId} 信息，来源 Issue #${issueNumber}`,
+            });
+
+            // 评论反馈 PR 地址
+            await github.issues.createComment({
+              ...context.repo,
+              issue_number: issueNumber,
+              body: `✅ 已创建自动更新的 Pull Request: #${pr.number} - ${pr.html_url}`,
+            });
