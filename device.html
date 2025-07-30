@@ -10,13 +10,14 @@
     .field-group { margin-bottom: 1em; }
   </style>
 
-  <!-- Firebase SDK 加载 -->
-  <!-- 注意：请替换 X.X.X 为你当前 Firebase SDK 的最新版本，例如 9.22.0 或 10.11.0 -->
-  <!-- 你可以在 Firebase Console -> Project settings -> General -> Your apps -> SDK setup and configuration 中找到最新的 CDN URL -->
-  <script src="https://www.gstatic.com/firebasejs/X.X.X/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/X.X.X/firebase-database-compat.js"></script>
+  <!-- Firebase Compatibility (Compat) SDK 加载 -->
+  <!-- 注意：请将 9.22.0 替换为你从 Firebase 控制台 Project settings -> Your apps -> SDK setup and configuration 中找到的实际版本号 -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <!-- 如果你未来计划使用 Firebase 认证，还需要这个： -->
-  <!-- <script src="https://www.gstatic.com/firebasejs/X.X.X/firebase-auth-compat.js"></script> -->
+  <!-- <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script> -->
+  <!-- 如果你不需要 Analytics，可以不加载这个SDK -->
+  <!-- <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script> -->
 
 </head>
 <body>
