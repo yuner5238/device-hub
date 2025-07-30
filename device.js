@@ -43,9 +43,12 @@ async function submitDeviceUpdateToGitHub(deviceId, updatedData) {
 
   const apiBase = "https://api.github.com";
   const headers = {
-    Authorization: `token ${TOKEN}`,
+    Authorization: `Bearer ${TOKEN}`,  // 注意这里改成 Bearer
     Accept: "application/vnd.github+json",
   };
+
+  console.log("请求文件URL:", `${apiBase}/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${FILE_PATH}?ref=main`);
+  console.log("请求头:", headers);
 
   // 1. 获取文件内容（包含 sha）
   const fileRes = await fetch(`${apiBase}/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${FILE_PATH}?ref=main`, {
