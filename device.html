@@ -1,23 +1,38 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html>
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>设备详情</title>
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    .edit-field { display: none; margin-top: 0.5em; }
+    .view-field span { font-weight: normal; }
+    .field-group { margin-bottom: 1em; }
+  </style>
 </head>
 <body>
-  <h1 id="deviceName">设备名称</h1>
-  <p><strong>位置:</strong> <span id="deviceLocation"></span></p>
-  <p><strong>上次维护:</strong> <span id="deviceMaintenance"></span></p>
-  <p><strong>备注:</strong> <span id="deviceNotes"></span></p>
+  <h2 id="deviceName">设备名称</h2>
 
-  <hr />
+  <div class="field-group">
+    <div class="view-field">位置: <span id="deviceLocation"></span></div>
+    <input class="edit-field" id="editLocation" type="text" />
+  </div>
 
-  <h2>编辑信息（需密码）</h2>
-  <input type="password" id="inputEditPassword" placeholder="请输入密码" />
-  <br /><br />
-  <label>位置: <input type="text" id="editLocation" /></label><br /><br />
-  <label>备注: <textarea id="editNotes" rows="4" cols="30"></textarea></label><br /><br />
-  <button id="btnSaveDeviceInfo">保存</button>
+  <div class="field-group">
+    <div class="view-field">上次维护: <span id="deviceMaintenance"></span></div>
+  </div>
+
+  <div class="field-group">
+    <div class="view-field">备注: <span id="deviceNotes"></span></div>
+    <textarea class="edit-field" id="editNotes" rows="4" cols="40"></textarea>
+  </div>
+
+  <div class="edit-field field-group">
+    密码：<input type="password" id="inputEditPassword" />
+  </div>
+
+  <button id="btnEdit">编辑</button>
+  <button id="btnSaveDeviceInfo" class="edit-field">保存</button>
 
   <script src="js/device.js"></script>
 </body>
