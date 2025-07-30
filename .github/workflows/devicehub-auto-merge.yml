@@ -1,24 +1,70 @@
-name: Auto Merge DeviceHub PRs
+# .github/workflows/device-update.yml
+name: Update Device From Issue
 
 on:
-  pull_request:
+  issues:
     types: [opened]
 
 jobs:
-  auto-merge:
-    if: startsWith(github.head_ref, 'devicehub/update-')
+  process-update:
+    if: startsWith(github.event.issue.title, 'Update Device ')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Auto approve
-        uses: hmarr/auto-approve-action@v3
-        with:
-          github-token: ${{ secrets.DEVICEHUB_GH_PAT }}
+      - name: Parse issue body and update devices.json
+        run: |
+          echo "Parsing issue to update device info..."
+          deviceId=$(echo "${{ github.event.issue.title }}" | cut -d ' ' -f 3)
+          echo "Device ID: $deviceId"
+          
+          # 将 issue body 内容写入 update.json 临时文件
+          echo "${{ github.event.issue.body }}" > update.json
+          
+          # Python 脚本处理 JSON 修改 devices.json
+          python3 <<EOF
+import json
 
-      - name: Auto merge PR
-        uses: pascalgn/automerge-action@v0.15.3
-        env:
-          GITHUB_TOKEN: ${{ secrets.DEVICEHUB_GH_PAT }}
-          MERGE_METHOD: squash
+device_id = "$deviceId"
+with open("devices.json", "r", encoding="utf-8") as f:
+    devices = json.load(f)
+with open("update.json", "r", encoding="utf-8") as f:
+    update_data = json.load(f)
+
+for i, d in enumerate(devices):
+    if d['id'] == device_id:
+        devices[i].update(update_data)
+        break
+else:
+    print("Device ID not found.")
+    exit(1)
+
+with open("devices.json", "w", encoding="utf-8") as f:
+    json.dump(devices, f, indent=2, ensure_ascii=False)
+EOF
+
+      - name: Create branch and commit
+        id: commit_changes
+        run: |
+          branch="devicehub/update-${{ github.event.issue.number }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b $branch
+          git add devices.json
+          git commit -m "Update device from issue #${{ github.event.issue.number }}"
+          git push origin $branch
+          echo "::set-output name=branch::$branch"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.commit_changes.outputs.branch }}
+          title: "Update device from issue #${{ github.event.issue.number }}"
+          body: "自动更新设备信息，来源 Issue #${{ github.event.issue.number }}"
+
+      - name: Close issue
+        uses: peter-evans/close-issue@v2
+        with:
+          issue-number: ${{ github.event.issue.number }}
