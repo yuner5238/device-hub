@@ -47,6 +47,10 @@ async function submitDeviceUpdateToGitHub(deviceId, updatedData) {
     Authorization: `token ${TOKEN}`,
     Accept: "application/vnd.github+json",
   };
+  console.log("TOKEN:", TOKEN);
+
+VM1375:1 Uncaught ReferenceError: TOKEN is not defined
+    at <anonymous>:1:23
 
   const fileRes = await fetch(`${apiBase}/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${FILE_PATH}?ref=main`, {
     headers,
