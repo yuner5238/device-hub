@@ -40,7 +40,7 @@ document.getElementById("btnSaveDeviceInfo").addEventListener("click", () => {
 });
 
 async function submitDeviceUpdateToGitHub(updatedDevice) {
-  const GITHUB_TOKEN = "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"; // ⚠️ 本地调试用
+  const GITHUB_TOKEN = "你的 GitHub PAT"; // ⚠️ 本地测试使用，线上请勿暴露
   const REPO_OWNER = "yuner5238";
   const REPO_NAME = "device-hub";
   const DEVICES_JSON_PATH = "devices.json";
@@ -51,7 +51,7 @@ async function submitDeviceUpdateToGitHub(updatedDevice) {
     Accept: "application/vnd.github.v3+json"
   };
 
-  // 1. 获取 devices.json 文件
+  // 获取当前文件
   const fileRes = await fetch(
     `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DEVICES_JSON_PATH}?ref=${BASE_BRANCH}`,
     { headers }
@@ -61,7 +61,7 @@ async function submitDeviceUpdateToGitHub(updatedDevice) {
   const contentDecoded = atob(fileData.content);
   let devices = JSON.parse(contentDecoded);
 
-  // 2. 修改目标设备
+  // 更新设备数据
   const index = devices.findIndex((d) => d.id === updatedDevice.id);
   if (index === -1) {
     alert("设备未找到");
@@ -72,7 +72,7 @@ async function submitDeviceUpdateToGitHub(updatedDevice) {
   const updatedContent = JSON.stringify(devices, null, 2);
   const updatedEncoded = btoa(unescape(encodeURIComponent(updatedContent)));
 
-  // 3. 创建新分支
+  // 创建新分支
   const timestamp = Date.now();
   const newBranch = `devicehub/update-${updatedDevice.id}-${timestamp}`;
 
@@ -94,7 +94,7 @@ async function submitDeviceUpdateToGitHub(updatedDevice) {
     }
   );
 
-  // 4. 提交文件到新分支
+  // 提交文件
   await fetch(
     `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DEVICES_JSON_PATH}`,
     {
@@ -109,7 +109,7 @@ async function submitDeviceUpdateToGitHub(updatedDevice) {
     }
   );
 
-  // 5. 创建 PR
+  // 创建 PR
   const prRes = await fetch(
     `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls`,
     {
