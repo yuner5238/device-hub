@@ -1,117 +1,114 @@
-const EDIT_PASSWORD = "123456";
+// --- Firebase 配置与初始化 ---
+// !!! 请务必替换为你在 Firebase 控制台中找到的实际配置信息 !!!
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "device-hub-5238.firebaseapp.com",
+  databaseURL: "https://device-hub-5238-default-rtdb.firebaseio.com",
+  projectId: "device-hub-5238",
+  storageBucket: "device-hub-5238.appspot.com",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+// 初始化 Firebase 应用
+firebase.initializeApp(firebaseConfig);
+
+// 获取 Realtime Database 实例
+const database = firebase.database();
+
+// --- 常量与辅助函数 ---
+const EDIT_PASSWORD = "123456"; // 简单密码保护，强烈建议未来使用 Firebase Authentication
 
 function getDeviceIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
   return params.get("id");
 }
 
+/**
+ * 从 Firebase Realtime Database 获取单个设备数据
+ * 假设你的设备数据结构是：
+ * {
+ *   "devices": {
+ *     "device-id-1": { ...设备1数据... },
+ *     "device-id-2": { ...设备2数据... }
+ *   }
+ * }
+ */
 async function fetchDeviceData(deviceId) {
-  const res = await fetch("devices.json");
-  if (!res.ok) {
-    alert("设备数据加载失败");
+  try {
+    const snapshot = await database.ref('devices/' + deviceId).once('value');
+    if (snapshot.exists()) {
+      const deviceData = snapshot.val();
+      // 为了兼容原来的 devices.json 结构（有 id 字段），这里手动添加 id
+      return { id: deviceId, ...deviceData };
+    } else {
+      console.warn("未找到设备ID:", deviceId);
+      return null;
+    }
+  } catch (error) {
+    console.error("从 Firebase 获取设备数据失败:", error);
+    alert("设备数据加载失败：" + error.message);
     return null;
   }
-  const devices = await res.json();
-  return devices.find(d => d.id === deviceId) || null;
 }
 
 function showDeviceData(device) {
-  document.getElementById("deviceName").textContent = device.name;
-  document.getElementById("deviceLocation").textContent = device.location;
-  document.getElementById("deviceMaintenance").textContent = device.last_maintenance;
-  document.getElementById("deviceNotes").textContent = device.notes;
+  document.getElementById("deviceName").textContent = device.name || "未知设备"; // 假设设备数据中有name字段
+  document.getElementById("deviceLocation").textContent = device.location || "N/A";
+  document.getElementById("deviceMaintenance").textContent = device.last_maintenance || "N/A";
+  document.getElementById("deviceNotes").textContent = device.notes || "无";
 
-  document.getElementById("editLocation").value = device.location;
-  document.getElementById("editNotes").value = device.notes;
+  // 填充编辑字段
+  document.getElementById("editLocation").value = device.location || "";
+  document.getElementById("editNotes").value = device.notes || "";
 }
 
 function toggleEditMode(editMode) {
   document.querySelectorAll(".view-field").forEach(el => el.style.display = editMode ? "none" : "block");
   document.querySelectorAll(".edit-field").forEach(el => el.style.display = editMode ? "block" : "none");
+  document.getElementById("btnEdit").style.display = editMode ? "none" : "block"; // 编辑模式下隐藏编辑按钮
+  document.getElementById("btnSaveDeviceInfo").style.display = editMode ? "block" : "none"; // 编辑模式下显示保存按钮
 }
 
-async function submitDeviceUpdateToGitHub(deviceId, updatedData) {
-  const GITHUB_OWNER = "yuner5238";
-  const GITHUB_REPO = "device-hub";
-  const FILE_PATH = "devices.json";
-  const TOKEN = "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"; // 临时测试用，请妥善保管
-
-  if (!TOKEN || TOKEN.includes("xxxxx")) {
-    alert("GitHub Token 未配置，无法提交数据。");
-    return;
+/**
+ * 将更新后的设备数据保存到 Firebase Realtime Database
+ */
+async function saveDeviceDataToFirebase(deviceId, updatedData) {
+  try {
+    // 使用 update 方法只更新指定字段，不会覆盖整个设备对象
+    await database.ref('devices/' + deviceId).update(updatedData);
+    console.log("设备信息已成功更新到 Firebase！");
+    alert("已成功更新设备信息！");
+    return true;
+  } catch (error) {
+    console.error("保存设备信息到 Firebase 失败:", error);
+    alert("保存失败：" + error.message);
+    return false;
   }
-
-  const apiBase = "https://api.github.com";
-  const headers = {
-    Authorization: `Bearer ${TOKEN}`,  // 注意这里改成 Bearer
-    Accept: "application/vnd.github+json",
-  };
-
-  console.log("请求文件URL:", `${apiBase}/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${FILE_PATH}?ref=main`);
-  console.log("请求头:", headers);
-
-  // 1. 获取文件内容（包含 sha）
-  const fileRes = await fetch(`${apiBase}/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${FILE_PATH}?ref=main`, {
-    headers,
-  });
-
-  if (!fileRes.ok) {
-    alert("无法读取设备数据文件");
-    return;
-  }
-
-  const fileData = await fileRes.json();
-  const content = atob(fileData.content);
-  const devices = JSON.parse(content);
-
-  // 2. 修改指定设备
-  const deviceIndex = devices.findIndex(d => d.id === deviceId);
-  if (deviceIndex === -1) {
-    alert("找不到设备 ID");
-    return;
-  }
-
-  devices[deviceIndex] = { ...devices[deviceIndex], ...updatedData };
-
-  // 3. 直接提交到主分支
-  const newContent = btoa(JSON.stringify(devices, null, 2));
-  const putRes = await fetch(`${apiBase}/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${FILE_PATH}`, {
-    method: "PUT",
-    headers,
-    body: JSON.stringify({
-      message: `直接更新设备 ${deviceId}`,
-      content: newContent,
-      branch: "main",
-      sha: fileData.sha,
-    }),
-  });
-
-  if (!putRes.ok) {
-    const errData = await putRes.json();
-    alert("提交失败：" + (errData.message || putRes.statusText));
-    return;
-  }
-
-  alert("已成功提交并更新设备信息！");
 }
 
+
+// --- 初始化逻辑 ---
 async function init() {
   const deviceId = getDeviceIdFromUrl();
   if (!deviceId) {
-    alert("设备ID缺失，无法加载");
+    alert("设备ID缺失，无法加载。请确保URL中包含 '?id=your-device-id' 参数。");
     return;
   }
 
   const device = await fetchDeviceData(deviceId);
   if (!device) {
-    alert("未找到对应设备信息");
+    alert("未找到对应设备信息或加载失败。");
     return;
   }
 
   showDeviceData(device);
-  toggleEditMode(false);
+  toggleEditMode(false); // 初始显示为查看模式
 
-  document.getElementById("btnEdit").onclick = () => toggleEditMode(true);
+  document.getElementById("btnEdit").onclick = () => {
+    toggleEditMode(true);
+    document.getElementById("inputEditPassword").value = ""; // 进入编辑模式时清空密码
+  };
 
   document.getElementById("btnSaveDeviceInfo").onclick = async () => {
     const inputPwd = document.getElementById("inputEditPassword").value.trim();
@@ -127,16 +124,18 @@ async function init() {
     const updatedData = {
       location: document.getElementById("editLocation").value.trim(),
       notes: document.getElementById("editNotes").value.trim(),
+      // 你可以添加更多需要更新的字段
+      // 例如：name: document.getElementById("deviceName").value.trim(),
     };
 
-    try {
-      await submitDeviceUpdateToGitHub(deviceId, updatedData);
+    // 保存到 Firebase
+    const saveSuccess = await saveDeviceDataToFirebase(deviceId, updatedData);
+
+    if (saveSuccess) {
       toggleEditMode(false);
-      // 保存成功后，刷新页面显示最新数据
+      // 保存成功后，从 Firebase 重新获取最新数据并显示
       const refreshedDevice = await fetchDeviceData(deviceId);
       if (refreshedDevice) showDeviceData(refreshedDevice);
-    } catch (err) {
-      alert("保存失败：" + err.message);
     }
   };
 }
