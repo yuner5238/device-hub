@@ -17,7 +17,7 @@ async function loadDeviceDetail() {
 
   try {
     // ✅ 修复路径：直接从当前目录加载 devices.json
-    const res = await fetch("device-hub/devices.json");
+    const res = await fetch("devices.json");
     const devices = await res.json();
 
     const device = devices.find(d => d.id === deviceId);
