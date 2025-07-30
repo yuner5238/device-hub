@@ -1,5 +1,46 @@
+const deviceId = new URLSearchParams(location.search).get("id");
+
+let currentDevice = null;
+
+async function loadDeviceDetail() {
+  const res = await fetch("devices.json");
+  const devices = await res.json();
+  const device = devices.find((d) => d.id === deviceId);
+
+  if (!device) {
+    document.body.innerHTML = "<p>未找到设备</p>";
+    return;
+  }
+
+  currentDevice = device;
+
+  document.getElementById("deviceName").textContent = device.name;
+  document.getElementById("deviceLocation").textContent = device.location;
+  document.getElementById("deviceMaintenance").textContent = device.last_maintenance;
+  document.getElementById("deviceNotes").textContent = device.notes;
+
+  document.getElementById("editLocation").value = device.location;
+  document.getElementById("editNotes").value = device.notes;
+}
+
+document.getElementById("btnSaveDeviceInfo").addEventListener("click", () => {
+  const password = document.getElementById("inputEditPassword").value;
+  if (password !== "123456") {
+    alert("密码错误！");
+    return;
+  }
+
+  const updatedDevice = {
+    ...currentDevice,
+    location: document.getElementById("editLocation").value,
+    notes: document.getElementById("editNotes").value,
+  };
+
+  submitDeviceUpdateToGitHub(updatedDevice);
+});
+
 async function submitDeviceUpdateToGitHub(updatedDevice) {
-  const GITHUB_TOKEN = "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";
+  const GITHUB_TOKEN = "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"; // ⚠️ 本地调试用
   const REPO_OWNER = "yuner5238";
   const REPO_NAME = "device-hub";
   const DEVICES_JSON_PATH = "devices.json";
@@ -10,7 +51,7 @@ async function submitDeviceUpdateToGitHub(updatedDevice) {
     Accept: "application/vnd.github.v3+json"
   };
 
-  // Step 1: 获取最新 devices.json 的 SHA 和内容
+  // 1. 获取 devices.json 文件
   const fileRes = await fetch(
     `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DEVICES_JSON_PATH}?ref=${BASE_BRANCH}`,
     { headers }
@@ -20,20 +61,20 @@ async function submitDeviceUpdateToGitHub(updatedDevice) {
   const contentDecoded = atob(fileData.content);
   let devices = JSON.parse(contentDecoded);
 
-  // Step 2: 更新目标设备信息
-  const deviceIndex = devices.findIndex((d) => d.id === updatedDevice.id);
-  if (deviceIndex === -1) {
-    alert("未找到设备，无法提交更新");
+  // 2. 修改目标设备
+  const index = devices.findIndex((d) => d.id === updatedDevice.id);
+  if (index === -1) {
+    alert("设备未找到");
     return;
   }
-  devices[deviceIndex] = updatedDevice;
+  devices[index] = updatedDevice;
 
   const updatedContent = JSON.stringify(devices, null, 2);
-  const updatedEncoded = btoa(unescape(encodeURIComponent(updatedContent))); // 支持中文
+  const updatedEncoded = btoa(unescape(encodeURIComponent(updatedContent)));
 
-  // Step 3: 创建新分支
+  // 3. 创建新分支
   const timestamp = Date.now();
-  const branchName = `devicehub/update-${updatedDevice.id}-${timestamp}`;
+  const newBranch = `devicehub/update-${updatedDevice.id}-${timestamp}`;
 
   const refRes = await fetch(
     `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/refs/heads/${BASE_BRANCH}`,
@@ -41,27 +82,53 @@ async function submitDeviceUpdateToGitHub(updatedDevice) {
   );
   const refData = await refRes.json();
 
-  const createBranchRes = await fetch(
+  await fetch(
     `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/refs`,
     {
       method: "POST",
       headers,
       body: JSON.stringify({
-        ref: `refs/heads/${branchName}`,
+        ref: `refs/heads/${newBranch}`,
         sha: refData.object.sha
       })
     }
   );
-  if (!createBranchRes.ok) {
-    alert("创建分支失败");
-    return;
-  }
 
-  // Step 4: 修改文件并提交 commit
-  const updateFileRes = await fetch(
+  // 4. 提交文件到新分支
+  await fetch(
     `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DEVICES_JSON_PATH}`,
     {
       method: "PUT",
       headers,
       body: JSON.stringify({
-        mes
+        message: `Update device ${updatedDevice.id} info`,
+        content: updatedEncoded,
+        sha: fileData.sha,
+        branch: newBranch
+      })
+    }
+  );
+
+  // 5. 创建 PR
+  const prRes = await fetch(
+    `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        title: `DeviceHub: Update device ${updatedDevice.id} information`,
+        head: newBranch,
+        base: BASE_BRANCH,
+        body: `自动提交设备 ${updatedDevice.id} 信息更新请求。`
+      })
+    }
+  );
+
+  if (prRes.ok) {
+    alert("修改已提交，将自动合并！");
+  } else {
+    alert("PR 创建失败");
+  }
+}
+
+loadDeviceDetail();
