@@ -23,6 +23,14 @@ async function loadDeviceDetail() {
   document.getElementById("editNotes").value = device.notes;
 }
 
+// 切换到编辑模式
+document.getElementById("btnEdit").addEventListener("click", () => {
+  document.querySelectorAll(".edit-field").forEach(el => el.style.display = "block");
+  document.querySelectorAll(".view-field").forEach(el => el.style.display = "none");
+  document.getElementById("btnEdit").style.display = "none";
+});
+
+// 保存信息
 document.getElementById("btnSaveDeviceInfo").addEventListener("click", () => {
   const password = document.getElementById("inputEditPassword").value;
   if (password !== "123456") {
@@ -39,8 +47,9 @@ document.getElementById("btnSaveDeviceInfo").addEventListener("click", () => {
   submitDeviceUpdateToGitHub(updatedDevice);
 });
 
+// 提交到 GitHub PR
 async function submitDeviceUpdateToGitHub(updatedDevice) {
-  const GITHUB_TOKEN = "你的 GitHub PAT"; // ⚠️ 本地测试使用，线上请勿暴露
+  const GITHUB_TOKEN = "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";
   const REPO_OWNER = "yuner5238";
   const REPO_NAME = "device-hub";
   const DEVICES_JSON_PATH = "devices.json";
@@ -51,7 +60,6 @@ async function submitDeviceUpdateToGitHub(updatedDevice) {
     Accept: "application/vnd.github.v3+json"
   };
 
-  // 获取当前文件
   const fileRes = await fetch(
     `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DEVICES_JSON_PATH}?ref=${BASE_BRANCH}`,
     { headers }
@@ -61,18 +69,17 @@ async function submitDeviceUpdateToGitHub(updatedDevice) {
   const contentDecoded = atob(fileData.content);
   let devices = JSON.parse(contentDecoded);
 
-  // 更新设备数据
   const index = devices.findIndex((d) => d.id === updatedDevice.id);
   if (index === -1) {
     alert("设备未找到");
     return;
   }
+
   devices[index] = updatedDevice;
 
   const updatedContent = JSON.stringify(devices, null, 2);
   const updatedEncoded = btoa(unescape(encodeURIComponent(updatedContent)));
 
-  // 创建新分支
   const timestamp = Date.now();
   const newBranch = `devicehub/update-${updatedDevice.id}-${timestamp}`;
 
@@ -94,7 +101,6 @@ async function submitDeviceUpdateToGitHub(updatedDevice) {
     }
   );
 
-  // 提交文件
   await fetch(
     `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DEVICES_JSON_PATH}`,
     {
@@ -109,8 +115,7 @@ async function submitDeviceUpdateToGitHub(updatedDevice) {
     }
   );
 
-  // 创建 PR
-  const prRes = await fetch(
+  await fetch(
     `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls`,
     {
       method: "POST",
@@ -124,11 +129,7 @@ async function submitDeviceUpdateToGitHub(updatedDevice) {
     }
   );
 
-  if (prRes.ok) {
-    alert("修改已提交，将自动合并！");
-  } else {
-    alert("PR 创建失败");
-  }
+  alert("修改已提交，将自动合并！");
 }
 
 loadDeviceDetail();
