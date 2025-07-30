@@ -1,20 +1,17 @@
-// --- Firebase 配置与初始化 ---
-// !!! 请务必替换为你在 Firebase 控制台中找到的实际配置信息 !!!
+// --- Firebase 配置 (可以保持全局，因为它只是数据) ---
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
+  apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
   authDomain: "device-hub-5238.firebaseapp.com",
   databaseURL: "https://device-hub-5238-default-rtdb.firebaseio.com",
   projectId: "device-hub-5238",
-  storageBucket: "device-hub-5238.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  storageBucket: "device-hub-5238.firebasestorage.app",
+  messagingSenderId: "648686550801",
+  appId: "1:648686550801:web:2f460487e32914042316b0",
+  measurementId: "G-44L5PHN36Y"
 };
 
-// 初始化 Firebase 应用
-firebase.initializeApp(firebaseConfig);
-
-// 获取 Realtime Database 实例
-const database = firebase.database();
+// --- Realtime Database 实例声明 (先声明，在 init() 中赋值) ---
+let database; // 声明为全局变量，以便其他函数可以访问
 
 // --- 常量与辅助函数 ---
 const EDIT_PASSWORD = "123456"; // 简单密码保护，强烈建议未来使用 Firebase Authentication
@@ -29,20 +26,21 @@ function getDeviceIdFromUrl() {
  * 假设你的设备数据结构是：
  * {
  *   "devices": {
- *     "device-id-1": { ...设备1数据... },
- *     "device-id-2": { ...设备2数据... }
+ *     "device-id-1": { "name": "设备1", "location": "位置1", ... },
+ *     "device-id-2": { "name": "设备2", "location": "位置2", ... }
  *   }
  * }
  */
 async function fetchDeviceData(deviceId) {
   try {
+    // 使用 .once('value') 获取一次性数据快照
     const snapshot = await database.ref('devices/' + deviceId).once('value');
     if (snapshot.exists()) {
       const deviceData = snapshot.val();
       // 为了兼容原来的 devices.json 结构（有 id 字段），这里手动添加 id
       return { id: deviceId, ...deviceData };
     } else {
-      console.warn("未找到设备ID:", deviceId);
+      console.warn("未在 Firebase 中找到设备ID:", deviceId);
       return null;
     }
   } catch (error) {
@@ -53,7 +51,9 @@ async function fetchDeviceData(deviceId) {
 }
 
 function showDeviceData(device) {
-  document.getElementById("deviceName").textContent = device.name || "未知设备"; // 假设设备数据中有name字段
+  // 注意：这里假设你的 Firebase 数据库中的设备对象有 name, location, last_maintenance, notes 字段
+  // 如果字段名不同，请根据你的实际数据结构进行修改
+  document.getElementById("deviceName").textContent = device.name || "未知设备";
   document.getElementById("deviceLocation").textContent = device.location || "N/A";
   document.getElementById("deviceMaintenance").textContent = device.last_maintenance || "N/A";
   document.getElementById("deviceNotes").textContent = device.notes || "无";
@@ -90,6 +90,11 @@ async function saveDeviceDataToFirebase(deviceId, updatedData) {
 
 // --- 初始化逻辑 ---
 async function init() {
+  // !!! 关键改动：在这里初始化 Firebase 应用和获取数据库实例 !!!
+  // 这确保了在这些代码执行时，firebase 全局对象已经可用。
+  firebase.initializeApp(firebaseConfig);
+  database = firebase.database(); // 将实例赋值给全局变量 database
+
   const deviceId = getDeviceIdFromUrl();
   if (!deviceId) {
     alert("设备ID缺失，无法加载。请确保URL中包含 '?id=your-device-id' 参数。");
@@ -98,7 +103,7 @@ async function init() {
 
   const device = await fetchDeviceData(deviceId);
   if (!device) {
-    alert("未找到对应设备信息或加载失败。");
+    alert("未找到对应设备信息或加载失败。请检查设备ID是否正确，以及 Firebase 数据库中是否存在该设备。");
     return;
   }
 
@@ -124,8 +129,9 @@ async function init() {
     const updatedData = {
       location: document.getElementById("editLocation").value.trim(),
       notes: document.getElementById("editNotes").value.trim(),
-      // 你可以添加更多需要更新的字段
+      // 如果你还需要更新其他字段，在这里添加
       // 例如：name: document.getElementById("deviceName").value.trim(),
+      // 'last_maintenance' 字段通常由后端或特殊操作更新，而不是直接从前端编辑
     };
 
     // 保存到 Firebase
@@ -140,4 +146,5 @@ async function init() {
   };
 }
 
+// 确保在整个页面加载完成后执行 init 函数
 window.onload = init;
