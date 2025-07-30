@@ -1,4 +1,5 @@
-// --- Firebase 配置 (可以保持全局，因为它只是数据) ---
+// --- Firebase 配置与初始化 ---
+// 这是你从 Firebase 控制台获取的配置信息，已为你替换
 const firebaseConfig = {
   apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
   authDomain: "device-hub-5238.firebaseapp.com",
@@ -10,7 +11,7 @@ const firebaseConfig = {
   measurementId: "G-44L5PHN36Y"
 };
 
-// --- Realtime Database 实例声明 (先声明，在 init() 中赋值) ---
+// Realtime Database 实例声明
 let database; // 声明为全局变量，以便其他函数可以访问
 
 // --- 常量与辅助函数 ---
@@ -23,24 +24,18 @@ function getDeviceIdFromUrl() {
 
 /**
  * 从 Firebase Realtime Database 获取单个设备数据
- * 假设你的设备数据结构是：
- * {
- *   "devices": {
- *     "device-id-1": { "name": "设备1", "location": "位置1", ... },
- *     "device-id-2": { "name": "设备2", "location": "位置2", ... }
- *   }
- * }
+ * 假设数据结构是：/devices/<deviceId>
  */
 async function fetchDeviceData(deviceId) {
   try {
-    // 使用 .once('value') 获取一次性数据快照
+    // 直接访问指定设备ID的路径
     const snapshot = await database.ref('devices/' + deviceId).once('value');
     if (snapshot.exists()) {
       const deviceData = snapshot.val();
-      // 为了兼容原来的 devices.json 结构（有 id 字段），这里手动添加 id
+      // 返回的数据中不包含id字段，但我们知道其id就是deviceId
       return { id: deviceId, ...deviceData };
     } else {
-      console.warn("未在 Firebase 中找到设备ID:", deviceId);
+      console.warn(`未在 Firebase 中找到 ID 为 "${deviceId}" 的设备。`);
       return null;
     }
   } catch (error) {
@@ -51,14 +46,11 @@ async function fetchDeviceData(deviceId) {
 }
 
 function showDeviceData(device) {
-  // 注意：这里假设你的 Firebase 数据库中的设备对象有 name, location, last_maintenance, notes 字段
-  // 如果字段名不同，请根据你的实际数据结构进行修改
   document.getElementById("deviceName").textContent = device.name || "未知设备";
   document.getElementById("deviceLocation").textContent = device.location || "N/A";
   document.getElementById("deviceMaintenance").textContent = device.last_maintenance || "N/A";
   document.getElementById("deviceNotes").textContent = device.notes || "无";
 
-  // 填充编辑字段
   document.getElementById("editLocation").value = device.location || "";
   document.getElementById("editNotes").value = device.notes || "";
 }
@@ -66,16 +58,16 @@ function showDeviceData(device) {
 function toggleEditMode(editMode) {
   document.querySelectorAll(".view-field").forEach(el => el.style.display = editMode ? "none" : "block");
   document.querySelectorAll(".edit-field").forEach(el => el.style.display = editMode ? "block" : "none");
-  document.getElementById("btnEdit").style.display = editMode ? "none" : "block"; // 编辑模式下隐藏编辑按钮
-  document.getElementById("btnSaveDeviceInfo").style.display = editMode ? "block" : "none"; // 编辑模式下显示保存按钮
+  document.getElementById("btnEdit").style.display = editMode ? "none" : "block";
+  document.getElementById("btnSaveDeviceInfo").style.display = editMode ? "block" : "none";
 }
 
 /**
  * 将更新后的设备数据保存到 Firebase Realtime Database
+ * 直接通过设备ID更新
  */
 async function saveDeviceDataToFirebase(deviceId, updatedData) {
   try {
-    // 使用 update 方法只更新指定字段，不会覆盖整个设备对象
     await database.ref('devices/' + deviceId).update(updatedData);
     console.log("设备信息已成功更新到 Firebase！");
     alert("已成功更新设备信息！");
@@ -87,13 +79,11 @@ async function saveDeviceDataToFirebase(deviceId, updatedData) {
   }
 }
 
-
 // --- 初始化逻辑 ---
 async function init() {
-  // !!! 关键改动：在这里初始化 Firebase 应用和获取数据库实例 !!!
-  // 这确保了在这些代码执行时，firebase 全局对象已经可用。
+  // 确保在这些代码执行时，firebase 全局对象已经可用。
   firebase.initializeApp(firebaseConfig);
-  database = firebase.database(); // 将实例赋值给全局变量 database
+  database = firebase.database();
 
   const deviceId = getDeviceIdFromUrl();
   if (!deviceId) {
@@ -108,11 +98,11 @@ async function init() {
   }
 
   showDeviceData(device);
-  toggleEditMode(false); // 初始显示为查看模式
+  toggleEditMode(false);
 
   document.getElementById("btnEdit").onclick = () => {
     toggleEditMode(true);
-    document.getElementById("inputEditPassword").value = ""; // 进入编辑模式时清空密码
+    document.getElementById("inputEditPassword").value = "";
   };
 
   document.getElementById("btnSaveDeviceInfo").onclick = async () => {
@@ -129,17 +119,12 @@ async function init() {
     const updatedData = {
       location: document.getElementById("editLocation").value.trim(),
       notes: document.getElementById("editNotes").value.trim(),
-      // 如果你还需要更新其他字段，在这里添加
-      // 例如：name: document.getElementById("deviceName").value.trim(),
-      // 'last_maintenance' 字段通常由后端或特殊操作更新，而不是直接从前端编辑
     };
 
-    // 保存到 Firebase
     const saveSuccess = await saveDeviceDataToFirebase(deviceId, updatedData);
 
     if (saveSuccess) {
       toggleEditMode(false);
-      // 保存成功后，从 Firebase 重新获取最新数据并显示
       const refreshedDevice = await fetchDeviceData(deviceId);
       if (refreshedDevice) showDeviceData(refreshedDevice);
     }
