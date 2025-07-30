@@ -34,7 +34,7 @@ async function submitDeviceUpdateToGitHub(deviceId, updatedData) {
   const GITHUB_OWNER = "yuner5238";
   const GITHUB_REPO = "device-hub";
   const FILE_PATH = "devices.json";
-  const TOKEN = "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i"; // 临时测试用，请妥善保管
+  const TOKEN = "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"; // 临时测试用，请妥善保管
 
   if (!TOKEN || TOKEN.includes("xxxxx")) {
     alert("GitHub Token 未配置，无法提交数据。");
