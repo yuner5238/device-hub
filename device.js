@@ -11,6 +11,56 @@ const firebaseConfig = {
   measurementId: "G-44L5PHN36Y"
 };
 
+初始化 Firebase 应用和服务
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app); // 获取认证服务实例
+const db = getDatabase(app); // 获取 Realtime Database 服务实例
+
+尝试匿名登录
+signInAnonymously(auth)
+  .then(() => {
+    // 匿名登录成功！
+    const user = auth.currentUser;
+    console.log("匿名用户已登录！");
+    console.log("用户UID (唯一标识符):", user.uid); // 你会看到一个临时的 UID
+
+    // 现在，由于用户已经认证 (即使是匿名的)，
+    // 你的 Realtime Database 写入操作就能通过 ".write": "auth != null" 规则了！
+
+    // 示例：向你的数据库写入一些数据
+    // 假设你想在 'messages' 路径下写入一条消息
+    const messageRef = ref(db, 'messages/welcome'); // 创建一个指向 'messages/welcome' 的引用
+    set(messageRef, {
+      text: "Hello from a securely authenticated (anonymous) user!",
+      timestamp: new Date().toISOString(),
+      senderUid: user.uid // 可以将用户的UID保存下来，方便后续跟踪或更精细的权限控制
+    })
+    .then(() => {
+      console.log("数据写入 Realtime Database 成功！请检查你的 Firebase 控制台。");
+    })
+    .catch((error) => {
+      console.error("数据写入失败:", error.message);
+    });
+
+  })
+  .catch((error) => {
+    // 匿名登录失败
+    const errorCode = error.code;
+    const errorMessage = error.message;
+    console.error("匿名登录失败！错误代码:", errorCode, "错误信息:", errorMessage);
+    // 这里你可能需要显示一个错误信息给用户，或者采取其他恢复措施
+  });
+
+// 你还可以监听认证状态的变化，以便在用户登录/登出时更新 UI
+// import { onAuthStateChanged } from 'firebase/auth';
+// onAuthStateChanged(auth, (user) => {
+//   if (user) {
+//     console.log("认证状态改变：用户已登录", user.uid);
+//   } else {
+//     console.log("认证状态改变：用户已登出");
+//   }
+// });
+
 // Realtime Database 实例声明
 let database; // 声明为全局变量，以便其他函数可以访问
 
