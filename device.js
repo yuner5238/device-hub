@@ -1,15 +1,15 @@
-// device.js - 针对 GitHub Pages (无构建工具) 的完整版
+// device.js - 针对 GitHub Pages (无构建工具) 的最终版
 
-// 【重要修改】: 直接从 CDN 导入 Firebase 模块。
-// 请注意，这里的版本号 (例如 9.22.0) 需要与你在 Firebase 控制台看到的 Web SDK 版本一致。
+// 【重要】: 请再次确认这些导入路径。它们必须是完整的 CDN URL。
+// 请确保版本号 (例如 9.22.0) 与你在 Firebase 控制台看到的 Web SDK 版本一致。
 // 你可以在 Firebase 控制台 -> 项目设置 -> 你的应用 -> SDK setup and configuration 中找到。
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
 import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js';
 import { getDatabase, ref, set, update, get, child } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js';
 
 // --- Firebase 配置信息 ---
-// 【重要提示】: 这些信息是你的项目独有的。
-// 我已经根据你提供的信息填充了，但请务必确认它们是最新的，并且在你的 Firebase 项目设置中是正确的。
+// 【重要】: 这些信息是你的项目独有的。
+// 我已经根据你提供的信息填充了，但请务必确认它们是最新的。
 const firebaseConfig = {
   apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
   authDomain: "device-hub-5238.firebaseapp.com",
@@ -23,15 +23,15 @@ const firebaseConfig = {
 
 // --- Firebase 应用和服务初始化 ---
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app); // 获取认证服务实例
-const db = getDatabase(app); // 获取 Realtime Database 服务实例
+const auth = getAuth(app);
+const db = getDatabase(app);
 
 // --- 常量与辅助函数 ---
 
-// 【重要提示】: 这个密码保护方式非常不安全！
+// 【重要】: 这个密码保护方式非常不安全！
 // 任何查看你的源代码的人都能看到这个密码。
 // 在生产环境中，强烈建议使用 Firebase Authentication 提供的用户身份验证功能
-// 来控制用户对数据的写权限，而不是这种硬编码的密码。
+// 来控制用户对数据的写权限。
 const EDIT_PASSWORD = "123456";
 
 function getDeviceIdFromUrl() {
@@ -59,7 +59,7 @@ async function fetchDeviceData(deviceId) {
   }
 }
 
-// 【重要提示】: 这些 HTML 元素的 ID 必须在你的 HTML 文件中存在。
+// 【重要】: 这些 HTML 元素的 ID 必须在你的 HTML 文件中存在。
 function showDeviceData(device) {
   document.getElementById("deviceName").textContent = device.name || "未知设备";
   document.getElementById("deviceLocation").textContent = device.location || "N/A";
@@ -70,7 +70,7 @@ function showDeviceData(device) {
   document.getElementById("editNotes").value = device.notes || "";
 }
 
-// 【重要提示】: 这些类名和 ID (`view-field`, `edit-field`, `btnEdit`, `btnSaveDeviceInfo`)
+// 【重要】: 这些类名和 ID (`view-field`, `edit-field`, `btnEdit`, `btnSaveDeviceInfo`)
 // 必须与你的 HTML 结构相匹配。
 function toggleEditMode(editMode) {
   document.querySelectorAll(".view-field").forEach(el => el.style.display = editMode ? "none" : "block");
@@ -131,7 +131,7 @@ signInAnonymously(auth)
     showDeviceData(device);
     toggleEditMode(false);
 
-    // 【重要提示】: 确保你的 HTML 文件中存在 ID 为 "btnEdit" 和 "btnSaveDeviceInfo" 的按钮。
+    // 【重要】: 确保你的 HTML 文件中存在 ID 为 "btnEdit" 和 "btnSaveDeviceInfo" 的按钮。
     const btnEdit = document.getElementById("btnEdit");
     if (btnEdit) {
       btnEdit.onclick = () => {
@@ -180,6 +180,3 @@ signInAnonymously(auth)
     console.error("Firebase 匿名登录失败！设备管理功能将无法工作！", "错误代码:", errorCode, "错误信息:", errorMessage);
     alert(`应用初始化失败：无法连接到认证服务。错误: ${errorMessage}\n请检查网络连接或浏览器控制台了解更多信息。`);
   });
-
-// 不需要 window.onload = ...。当使用 type="module" 时，脚本默认是 defer 的，
-// 会在 HTML 解析完成后执行，并且 DOM 通常已经准备就绪。
