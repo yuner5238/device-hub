@@ -10,14 +10,11 @@
     .field-group { margin-bottom: 1em; }
   </style>
 
-  <!-- Firebase Compatibility (Compat) SDK 加载 -->
-  <!-- 注意：请将 9.22.0 替换为你从 Firebase 控制台 Project settings -> Your apps -> SDK setup and configuration 中找到的实际版本号 -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <!-- 如果你未来计划使用 Firebase 认证，还需要这个： -->
-  <!-- <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script> -->
-  <!-- 如果你不需要 Analytics，可以不加载这个SDK -->
-  <!-- <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script> -->
+  <!-- 【重要修改】移除所有 -compat.js 的加载！ -->
+  <!-- 因为你的 device.js 会使用模块化导入方式加载 Firebase SDK -->
+  <!-- <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script> -->
+  <!-- <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script> -->
+  <!-- ... 其他 compat 脚本也移除 ... -->
 
 </head>
 <body>
@@ -44,6 +41,7 @@
   <button id="btnEdit">编辑</button>
   <button id="btnSaveDeviceInfo" class="edit-field">保存</button>
 
+  <!-- 【保持不变】这个加载方式是正确的，因为它使用了 type="module" -->
   <script type="module" src="device.js"></script>
 </body>
 </html>
