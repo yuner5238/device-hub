@@ -2,41 +2,46 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>邮箱登录</title>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-
-    const firebaseConfig = {
-      apiKey: "你的apiKey",
-      authDomain: "你的项目.firebaseapp.com",
-      projectId: "你的项目",
-      appId: "你的appId"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-
-    window.login = () => {
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
-
-      signInWithEmailAndPassword(auth, email, password)
-        .then((userCredential) => {
-          const user = userCredential.user;
-          alert("登录成功：" + user.email);
-          window.location.href = "device.html?id=your-device-id";
-        })
-        .catch((error) => {
-          alert("登录失败: " + error.message);
-        });
-    };
-  </script>
+  <title>设备详情</title>
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    .edit-field { display: none; margin-top: 0.5em; }
+    .view-field span { font-weight: normal; }
+    .field-group { margin-bottom: 1em; }
+  </style>
 </head>
 <body>
-  <h2>邮箱密码登录</h2>
-  <input id="email" type="email" placeholder="邮箱"><br><br>
-  <input id="password" type="password" placeholder="密码"><br><br>
-  <button onclick="login()">登录</button>
+  <h2 id="deviceName">设备名称</h2>
+
+  <!-- 登录区域 -->
+  <div id="loginArea">
+    <p><strong>请登录后编辑设备信息：</strong></p>
+    <input type="email" id="email" placeholder="邮箱" />
+    <input type="password" id="password" placeholder="密码" />
+    <button id="btnLogin">登录</button>
+    <p id="loginStatus" style="color:red;"></p>
+  </div>
+
+  <!-- 显示设备信息 -->
+  <div id="deviceArea" style="display:none;">
+    <div class="field-group">
+      <div class="view-field">位置: <span id="deviceLocation"></span></div>
+      <input class="edit-field" id="editLocation" type="text" />
+    </div>
+
+    <div class="field-group">
+      <div class="view-field">上次维护: <span id="deviceMaintenance"></span></div>
+    </div>
+
+    <div class="field-group">
+      <div class="view-field">备注: <span id="deviceNotes"></span></div>
+      <textarea class="edit-field" id="editNotes" rows="4" cols="40"></textarea>
+    </div>
+
+    <button id="btnEdit">编辑</button>
+    <button id="btnSaveDeviceInfo" class="edit-field">保存</button>
+  </div>
+
+  <script type="module" src="./device.js"></script>
 </body>
 </html>
