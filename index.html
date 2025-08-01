@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>邮箱登录</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "你的apiKey",
+      authDomain: "你的项目.firebaseapp.com",
+      projectId: "你的项目",
+      appId: "你的appId"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.login = () => {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          const user = userCredential.user;
+          alert("登录成功：" + user.email);
+          window.location.href = "device.html?id=your-device-id";
+        })
+        .catch((error) => {
+          alert("登录失败: " + error.message);
+        });
+    };
+  </script>
+</head>
+<body>
+  <h2>邮箱密码登录</h2>
+  <input id="email" type="email" placeholder="邮箱"><br><br>
+  <input id="password" type="password" placeholder="密码"><br><br>
+  <button onclick="login()">登录</button>
+</body>
+</html>
