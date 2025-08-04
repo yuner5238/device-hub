@@ -78,16 +78,18 @@
     // 💡 从全局对象中获取 Firebase 模块
     const { initializeApp, getDatabase, ref, once, update, getAuth, signInAnonymously, onAuthStateChanged } = window.FirebaseApp;
 
-    // 💡 替换为你的 Firebase 项目配置
+    // 💡 你只需要替换 apiKey 和 appId
     const firebaseConfig = {
-      apiKey: "AIzaSyBnRKitQGBX0u8k4COtDTILYxCJuMf7xzE", // 这是一个示例API Key，请使用你自己的
+      apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
       authDomain: "device-hub-5238.firebaseapp.com",
       databaseURL: "https://device-hub-5238-default-rtdb.firebaseio.com",
       projectId: "device-hub-5238",
-      storageBucket: "device-hub-5238.appspot.com", // 通常是 projectId.appspot.com
-      messagingSenderId: "648686550801", // 这是你的项目编号
-      appId: "1:648686550801:web:xxxxxxxxxxxxxxxxxxxx" // 💡 你的 Web 应用 ID，请从 Firebase 控制台获取
+      storageBucket: "device-hub-5238.firebasestorage.app",
+      messagingSenderId: "648686550801",
+      appId: "1:648686550801:web:2f460487e32914042316b0",
+      measurementId: "G-44L5PHN36Y"
     };
+
 
     // 初始化 Firebase 应用
     const app = initializeApp(firebaseConfig);
