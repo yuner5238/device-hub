@@ -1,48 +1,17 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>设备详情</title>
-  <style>
-    body { font-family: sans-serif; margin: 2em; }
-    .edit-field { display: none; margin-top: 0.5em; }
-    .view-field span { font-weight: normal; }
-    .field-group { margin-bottom: 1em; }
-  </style>
+<!-- device.html -->
+<h2>设备详情</h2>
 
-  <!-- Firebase SDK 加载 -->
-  <!-- 注意：请替换 X.X.X 为你当前 Firebase SDK 的最新版本，例如 9.22.0 或 10.11.0 -->
-  <!-- 你可以在 Firebase Console -> Project settings -> General -> Your apps -> SDK setup and configuration 中找到最新的 CDN URL -->
-  <script src="https://www.gstatic.com/firebasejs/X.X.X/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/X.X.X/firebase-database-compat.js"></script>
-  <!-- 如果你未来计划使用 Firebase 认证，还需要这个： -->
-  <!-- <script src="https://www.gstatic.com/firebasejs/X.X.X/firebase-auth-compat.js"></script> -->
+<label>名称</label>
+<input id="deviceName" disabled />
 
-</head>
-<body>
-  <h2 id="deviceName">设备名称</h2>
+<label>位置</label>
+<input id="location" disabled />
 
-  <div class="field-group">
-    <div class="view-field">位置: <span id="deviceLocation"></span></div>
-    <input class="edit-field" id="editLocation" type="text" />
-  </div>
+<label>上次维护时间</label>
+<input id="lastMaintenance" disabled />
 
-  <div class="field-group">
-    <div class="view-field">上次维护: <span id="deviceMaintenance"></span></div>
-  </div>
+<label>备注</label>
+<textarea id="notes" disabled></textarea>
 
-  <div class="field-group">
-    <div class="view-field">备注: <span id="deviceNotes"></span></div>
-    <textarea class="edit-field" id="editNotes" rows="4" cols="40"></textarea>
-  </div>
-
-  <div class="edit-field field-group">
-    密码：<input type="password" id="inputEditPassword" />
-  </div>
-
-  <button id="btnEdit">编辑</button>
-  <button id="btnSaveDeviceInfo" class="edit-field">保存</button>
-
-  <script src="device.js"></script>
-</body>
-</html>
+<button id="editBtn">编辑</button>
+<button id="saveBtn" style="display: none;">保存</button>
