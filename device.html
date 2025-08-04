@@ -70,4 +70,126 @@
     >
       <el-input
         v-model="inputEditPassword"
-        placeholder
+        placeholder="编辑密码"
+        show-password
+        @keyup.enter.native="verifyPassword"
+      ></el-input>
+      <div style="color: red; margin-top: 10px;" v-if="passwordError">{{ passwordError }}</div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="passwordDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="verifyPassword">确认</el-button>
+      </span>
+    </el-dialog>
+
+    <el-empty v-if="!device && !loading" description="未找到设备"></el-empty>
+
+    <div v-if="loading" style="text-align:center; margin-top: 50px;">
+      <el-spinner type="circle"></el-spinner>
+    </div>
+  </div>
+
+  <!-- Vue & Element UI & Firebase -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
+      authDomain: "device-hub-5238.firebaseapp.com",
+      databaseURL: "https://device-hub-5238-default-rtdb.firebaseio.com",
+      projectId: "device-hub-5238",
+      storageBucket: "device-hub-5238.firebasestorage.app",
+      messagingSenderId: "648686550801",
+      appId: "1:648686550801:web:2f460487e32914042316b0",
+      measurementId: "G-44L5PHN36Y"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    new Vue({
+      el: '#app',
+      data: {
+        device: null,
+        loading: true,
+        isEditing: false,
+        passwordDialogVisible: false,
+        inputEditPassword: '',
+        passwordError: '',
+      },
+      created() {
+        this.loadDevice();
+      },
+      methods: {
+        getDeviceId() {
+          const urlParams = new URLSearchParams(window.location.search);
+          return urlParams.get('id');
+        },
+        async loadDevice() {
+          this.loading = true;
+          const id = this.getDeviceId();
+          if(!id) {
+            this.loading = false;
+            return;
+          }
+          try {
+            const snapshot = await database.ref('devices/' + id).once('value');
+            this.device = snapshot.val();
+            if(this.device) {
+              // 格式化日期为字符串（兼容 Element UI 日期选择器）
+              if(this.device.last_maintenance) {
+                this.device.last_maintenance = this.device.last_maintenance;
+              }
+            }
+          } catch(e) {
+            console.error('加载设备失败', e);
+          } finally {
+            this.loading = false;
+          }
+        },
+        showPasswordDialog() {
+          this.passwordDialogVisible = true;
+          this.inputEditPassword = '';
+          this.passwordError = '';
+        },
+        verifyPassword() {
+          if(this.inputEditPassword === 'bianji') {
+            this.isEditing = true;
+            this.passwordDialogVisible = false;
+            this.passwordError = '';
+          } else {
+            this.passwordError = '密码错误';
+          }
+        },
+        async saveDevice() {
+          if(!this.device) return;
+          const id = this.getDeviceId();
+          if(!id) return;
+
+          try {
+            await database.ref('devices/' + id).update({
+              location: this.device.location || '',
+              notes: this.device.notes || '',
+              last_maintenance: this.device.last_maintenance || '',
+            });
+            this.$message.success('保存成功');
+            this.isEditing = false;
+          } catch(e) {
+            this.$message.error('保存失败');
+            console.error(e);
+          }
+        },
+        cancelEdit() {
+          this.isEditing = false;
+          this.loadDevice();
+        },
+        goBack() {
+          window.history.back();
+        }
+      }
+    });
+  </script>
+</body>
+</html>
