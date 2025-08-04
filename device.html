@@ -100,7 +100,7 @@
       </div>      
       <div>
         <div class="label">备注</div>
-        <div class="value">{{ device.note || '-' }}</div>
+        <div class="value">{{ device.notes || '-' }}</div>
       </div>
       <div class="btn-edit" @click="tryEdit">编辑设备信息</div>
     </div>
@@ -111,7 +111,7 @@
           <el-input v-model="form.location" placeholder="请输入位置"></el-input>
         </el-form-item>
         <el-form-item label="备注">
-          <el-input type="textarea" v-model="form.note" placeholder="请输入备注" rows="3"></el-input>
+          <el-input type="textarea" v-model="form.notes" placeholder="请输入备注" rows="3"></el-input>
         </el-form-item>
         <el-form-item label="采购日期">
           <el-date-picker
@@ -215,7 +215,7 @@
         startEdit() {
           this.editMode = true;
           this.form.location = this.device.location || '';
-          this.form.note = this.device.note || '';
+          this.form.notes = this.device.notes || '';
           this.form.purchase_date = this.device.purchase_date || '';
           this.form.install_date = this.device.install_date || this.device.purchase_date || '';
         },
@@ -227,7 +227,7 @@
           this.loading = true;
           const updates = {
             location: this.form.location.trim(),
-            note: this.form.note.trim(),
+            notes: this.form.notes.trim(),
             purchase_date: this.form.purchase_date,
             install_date: this.form.install_date || this.form.purchase_date,
           };
