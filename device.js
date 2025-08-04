@@ -1,105 +1,85 @@
-// device.js
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+// Firebase 配置
+const firebaseConfig = {
+  apiKey: "你的API_KEY",
+  authDomain: "device-hub-5238.firebaseapp.com",
+  databaseURL: "https://device-hub-5238-default-rtdb.firebaseio.com",
+  projectId: "device-hub-5238",
+  storageBucket: "device-hub-5238.appspot.com",
+  messagingSenderId: "你的SenderId",
+  appId: "你的AppId"
+};
 
-<script>
-  // 初始化 Firebase（请替换为你的配置）
-  const firebaseConfig = {
-    apiKey: "你的 apiKey",
-    authDomain: "你的 authDomain",
-    databaseURL: "你的 databaseURL",
-    projectId: "你的 projectId",
-    storageBucket: "你的 storageBucket",
-    messagingSenderId: "你的 messagingSenderId",
-    appId: "你的 appId"
-  };
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+const EDIT_PASSWORD = "123456"; // 编辑密码
 
-  // 从 URL 获取设备 ID，例如 ?id=printer_154903
-  const urlParams = new URLSearchParams(window.location.search);
-  const deviceId = urlParams.get("id");
+function getDeviceIdFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("id");
+}
 
-  // 页面元素引用
-  const deviceNameEl = document.getElementById("deviceName");
-  const locationEl = document.getElementById("location");
-  const maintenanceEl = document.getElementById("lastMaintenance");
-  const notesEl = document.getElementById("notes");
-
-  const editBtn = document.getElementById("editBtn");
-  const saveBtn = document.getElementById("saveBtn");
-  const passwordPrompt = "bianji"; // 编辑密码
-
-  let isEditing = false;
-
-  // 获取设备数据
-  function fetchDeviceData(id) {
-    const refPath = `devices/${id}`;
-    firebase.database().ref(refPath).once("value")
-      .then(snapshot => {
+new Vue({
+  el: '#app',
+  data: {
+    device: null,
+    editMode: false,
+    editForm: {
+      location: '',
+      notes: ''
+    },
+    editPassword: ''
+  },
+  methods: {
+    async fetchDeviceData(id) {
+      try {
+        const snapshot = await database.ref('devices/' + id).once('value');
         if (snapshot.exists()) {
           const data = snapshot.val();
-          deviceNameEl.value = data.name || "";
-          locationEl.value = data.location || "";
-          maintenanceEl.value = data.last_maintenance || "";
-          notesEl.value = data.notes || "";
+          this.device = { id, ...data };
         } else {
-          console.error("未找到设备ID: " + id);
-          alert("未找到该设备，请确认链接是否正确。");
+          this.$message.error("未找到设备ID: " + id);
         }
-      })
-      .catch(error => {
-        console.error("读取失败: ", error);
-        alert("读取失败，请检查网络或数据库配置。");
-      });
-  }
+      } catch (err) {
+        console.error("数据加载失败", err);
+        this.$message.error("数据加载失败：" + err.message);
+      }
+    },
+    startEdit() {
+      this.editMode = true;
+      this.editForm.location = this.device.location || '';
+      this.editForm.notes = this.device.notes || '';
+      this.editPassword = '';
+    },
+    cancelEdit() {
+      this.editMode = false;
+    },
+    async saveEdit() {
+      if (this.editPassword !== EDIT_PASSWORD) {
+        this.$message.error("密码错误！");
+        return;
+      }
 
-  // 启用编辑模式
-  function enableEditing() {
-    const inputPwd = prompt("请输入编辑密码：");
-    if (inputPwd === passwordPrompt) {
-      isEditing = true;
-      [deviceNameEl, locationEl, maintenanceEl, notesEl].forEach(el => el.removeAttribute("disabled"));
-      saveBtn.style.display = "inline-block";
-      editBtn.style.display = "none";
-    } else {
-      alert("密码错误");
+      try {
+        await database.ref('devices/' + this.device.id).update({
+          location: this.editForm.location,
+          notes: this.editForm.notes
+        });
+        this.$message.success("保存成功！");
+        this.editMode = false;
+        this.fetchDeviceData(this.device.id); // 刷新数据
+      } catch (err) {
+        console.error("保存失败", err);
+        this.$message.error("保存失败：" + err.message);
+      }
     }
+  },
+  mounted() {
+    const id = getDeviceIdFromUrl();
+    if (!id) {
+      this.$message.error("URL 中缺少 id 参数！");
+      return;
+    }
+    this.fetchDeviceData(id);
   }
-
-  // 保存设备数据
-  function saveDeviceData() {
-    const updatedData = {
-      name: deviceNameEl.value,
-      location: locationEl.value,
-      last_maintenance: maintenanceEl.value,
-      notes: notesEl.value
-    };
-
-    firebase.database().ref(`devices/${deviceId}`).set(updatedData)
-      .then(() => {
-        alert("保存成功！");
-        isEditing = false;
-        [deviceNameEl, locationEl, maintenanceEl, notesEl].forEach(el => el.setAttribute("disabled", true));
-        saveBtn.style.display = "none";
-        editBtn.style.display = "inline-block";
-      })
-      .catch(error => {
-        console.error("保存失败：", error);
-        alert("保存失败，请重试");
-      });
-  }
-
-  // 初始化页面
-  if (deviceId) {
-    fetchDeviceData(deviceId);
-  } else {
-    alert("未指定设备 ID");
-  }
-
-  // 绑定按钮事件
-  editBtn.addEventListener("click", enableEditing);
-  saveBtn.addEventListener("click", saveDeviceData);
-</script>
+});
