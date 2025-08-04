@@ -1,211 +1,186 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>设备管理中心</title>
-  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>设备管理系统</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial;
       margin: 0;
-      padding: 0;
-      background: #f5f5f7;
-      color: #1d1d1f;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Segoe UI", Roboto, "Hiragino Sans GB", sans-serif;
+      background-color: #f8f8f8;
     }
     .container {
       max-width: 800px;
       margin: auto;
       padding: 20px;
     }
-    .announcement-box {
-      background: #fff;
+    .announcements {
+      background-color: #fff;
       border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 20px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+    .announcement-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
     }
     .device-card {
-      background: #fff;
+      background-color: #fff;
       border-radius: 12px;
       padding: 16px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      cursor: pointer;
       transition: transform 0.2s;
     }
     .device-card:hover {
       transform: translateY(-2px);
     }
-    .edit-btn {
-      float: right;
+    .device-title {
+      font-weight: 500;
+      font-size: 16px;
+      color: #111;
     }
-    @media (max-width: 600px) {
-      .device-card {
-        font-size: 14px;
-      }
+    .device-sub {
+      color: #888;
+      font-size: 14px;
+      margin-top: 4px;
+    }
+    .edit-area {
+      margin-top: 10px;
+    }
+    .el-input, .el-button {
+      margin-top: 5px;
     }
   </style>
 </head>
 <body>
   <div id="app" class="container">
     <!-- 公告栏 -->
-    <div class="announcement-box">
-      <el-row justify="space-between" align="middle">
-        <el-col><h3>📢 公告</h3></el-col>
-        <el-col><el-button @click="openEditDialog" size="small" type="primary" link>编辑</el-button></el-col>
-      </el-row>
-      <el-divider />
-      <div v-for="(ann, key) in announcements" :key="key" style="margin-bottom: 8px">
-        <strong>{{ ann.title }}</strong><br />
-        <span>{{ ann.content }}</span><br />
-        <el-text type="info" size="small">{{ ann.date }}</el-text>
-        <el-divider v-if="key !== Object.keys(announcements).slice(-1)[0]" />
+    <div class="announcements">
+      <div class="announcement-header">
+        <h3>📢 公告栏</h3>
+        <el-button type="text" @click="editing = !editing">{{ editing ? '取消' : '编辑' }}</el-button>
+      </div>
+      <div v-if="!editing">
+        <div v-for="(item, key) in announcementList" :key="key" style="margin-bottom: 12px;">
+          <strong>{{ item.title }}</strong>（{{ item.date }}）<br />
+          <span style="color: #555;">{{ item.content }}</span>
+        </div>
+      </div>
+      <div v-else class="edit-area">
+        <el-input v-model="editPassword" placeholder="请输入编辑密码" show-password></el-input>
+        <div v-for="(item, key, index) in announcementList" :key="key" style="margin-top: 10px;">
+          <el-input v-model="item.title" placeholder="标题"></el-input>
+          <el-input v-model="item.content" placeholder="内容"></el-input>
+          <el-date-picker v-model="item.date" type="date" placeholder="日期" style="width: 100%;"></el-date-picker>
+        </div>
+        <el-button type="primary" @click="saveAnnouncements">保存</el-button>
       </div>
     </div>
 
     <!-- 设备列表 -->
-    <div
-      v-for="device in visibleDevices"
-      :key="device.id"
-      class="device-card"
-      @click="goToDevice(device.id)"
-    >
-      <strong>{{ device.name }}</strong><br />
-      <el-text type="info">{{ device.location }}</el-text>
+    <div v-for="(device, key) in visibleDevices" :key="key" class="device-card" @click="goToDevice(key)">
+      <div class="device-title">{{ device.name }}</div>
+      <div class="device-sub">{{ device.location }}</div>
     </div>
 
-    <el-backtop :right="20" :bottom="60" />
-    <div v-if="loading" style="text-align: center; color: #999; margin: 20px 0">加载中...</div>
+    <!-- 加载提示 -->
+    <el-empty v-if="!loading && visibleDevices.length === 0" description="暂无设备"></el-empty>
+    <div v-if="loading" style="text-align: center; margin-top: 20px;">
+      <el-spinner type="snake"></el-spinner>
+    </div>
   </div>
 
-  <!-- 编辑公告对话框 -->
-  <el-dialog v-model="editDialogVisible" title="编辑公告" width="500px">
-    <el-form label-width="80px" v-if="editPasswordPassed">
-      <el-form-item label="标题">
-        <el-input v-model="newAnnouncement.title" />
-      </el-form-item>
-      <el-form-item label="内容">
-        <el-input v-model="newAnnouncement.content" type="textarea" rows="3" />
-      </el-form-item>
-      <el-form-item label="日期">
-        <el-date-picker v-model="newAnnouncement.date" type="date" format="YYYY-MM-DD" value-format="YYYY-MM-DD" />
-      </el-form-item>
-    </el-form>
-    <div v-else>
-      <el-input v-model="editPassword" type="password" placeholder="输入密码123456" />
-    </div>
-    <template #footer>
-      <el-button @click="editDialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="saveAnnouncement">确认</el-button>
-    </template>
-  </el-dialog>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <!-- Vue 3 & Element Plus -->
-  <script src="https://unpkg.com/vue@3"></script>
-  <script src="https://unpkg.com/element-plus"></script>
+  <!-- Firebase + Vue + Element UI -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
 
   <script>
+    // ✅ 用你的 Firebase 项目配置替换这里：
     const firebaseConfig = {
-       apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
-      authDomain: "device-hub-5238.firebaseapp.com",
-      databaseURL: "https://device-hub-5238-default-rtdb.firebaseio.com",
-      projectId: "device-hub-5238",
-      storageBucket: "device-hub-5238.firebasestorage.app",
-      messagingSenderId: "648686550801",
-      appId: "1:648686550801:web:2f460487e32914042316b0",
-      measurementId: "G-44L5PHN36Y"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_DOMAIN",
+      databaseURL: "https://your_project.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const app = Vue.createApp({
-      data() {
-        return {
-          announcements: {},
-          allDevices: [],
-          visibleDevices: [],
-          pageSize: 10,
-          pageIndex: 0,
-          loading: false,
-          editDialogVisible: false,
-          editPassword: '',
-          editPasswordPassed: false,
-          newAnnouncement: {
-            title: '',
-            content: '',
-            date: ''
-          }
-        };
+    new Vue({
+      el: '#app',
+      data: {
+        devices: {},
+        visibleDevices: [],
+        batchSize: 10,
+        loadedCount: 0,
+        loading: false,
+        announcementList: {},
+        editing: false,
+        editPassword: ''
+      },
+      created() {
+        this.fetchAnnouncements();
+        this.fetchDevices();
+        window.addEventListener('scroll', this.handleScroll);
       },
       methods: {
-        loadAnnouncements() {
-          firebase.database().ref('announcements').once('value').then(snapshot => {
-            this.announcements = snapshot.val() || {};
+        fetchAnnouncements() {
+          db.ref("announcements").once("value").then(snapshot => {
+            this.announcementList = snapshot.val() || {};
           });
         },
-        loadDevices() {
-          firebase.database().ref('/').once('value').then(snapshot => {
-            const data = snapshot.val();
-            this.allDevices = Object.entries(data)
-              .filter(([key, value]) => key !== 'announcements')
-              .map(([id, val]) => ({ id, ...val }));
+        saveAnnouncements() {
+          if (this.editPassword !== '123456') {
+            this.$message.error("密码错误");
+            return;
+          }
+          db.ref("announcements").set(this.announcementList).then(() => {
+            this.editing = false;
+            this.$message.success("已保存公告");
+          });
+        },
+        fetchDevices() {
+          db.ref("devices").once("value").then(snapshot => {
+            this.devices = snapshot.val() || {};
             this.loadMore();
           });
         },
         loadMore() {
           if (this.loading) return;
           this.loading = true;
-          const next = this.allDevices.slice(this.pageIndex, this.pageIndex + this.pageSize);
-          this.visibleDevices.push(...next);
-          this.pageIndex += this.pageSize;
+          const keys = Object.keys(this.devices);
+          const nextBatch = keys.slice(this.loadedCount, this.loadedCount + this.batchSize);
+          nextBatch.forEach(key => {
+            this.visibleDevices.push({ ...this.devices[key], key });
+          });
+          this.loadedCount += this.batchSize;
           this.loading = false;
         },
-        onScroll() {
-          const bottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 50;
-          if (bottom) this.loadMore();
-        },
-        goToDevice(id) {
-          window.location.href = `device.html?id=${id}`;
-        },
-        openEditDialog() {
-          this.editDialogVisible = true;
-          this.editPassword = '';
-          this.editPasswordPassed = false;
-        },
-        saveAnnouncement() {
-          if (!this.editPasswordPassed) {
-            if (this.editPassword === '123456') {
-              this.editPasswordPassed = true;
-              this.newAnnouncement = {
-                title: '',
-                content: '',
-                date: new Date().toISOString().split('T')[0]
-              };
-            } else {
-              ElementPlus.ElMessage.error('密码错误');
-            }
-            return;
+        handleScroll() {
+          const scrollY = window.scrollY;
+          const visibleHeight = document.documentElement.clientHeight;
+          const pageHeight = document.documentElement.scrollHeight;
+          if (scrollY + visibleHeight >= pageHeight - 100) {
+            this.loadMore();
           }
-          // push 新公告
-          const newKey = 'ann_' + Date.now();
-          firebase.database().ref(`announcements/${newKey}`).set(this.newAnnouncement).then(() => {
-            this.editDialogVisible = false;
-            this.loadAnnouncements();
-            ElementPlus.ElMessage.success('公告已添加');
-          });
+        },
+        goToDevice(key) {
+          window.location.href = `device.html?id=${encodeURIComponent(key)}`;
         }
-      },
-      mounted() {
-        this.loadAnnouncements();
-        this.loadDevices();
-        window.addEventListener('scroll', this.onScroll);
       }
     });
-    app.use(ElementPlus);
-    app.mount('#app');
   </script>
 </body>
 </html>
