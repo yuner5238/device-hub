@@ -7,95 +7,152 @@
   <title>设备管理主页</title>
   <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css" />
   <style>
+    /* 苹果风格基础色调 */
     body {
       margin: 0;
-      background: #f9f9f9;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-        sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+      background: #fefefe;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+        sans-serif;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      padding: 16px;
+      color: #1d1d1f;
+      padding: 24px 16px;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     #app {
-      max-width: 960px;
+      max-width: 600px;
       margin: 0 auto;
     }
 
-    .announcement-bar {
-      margin-bottom: 24px;
-    }
-
-    .announcement-list .el-alert {
-      margin-bottom: 12px;
-      border-radius: 10px;
-      font-weight: 500;
-      font-size: 14px;
-    }
-
-    .edit-announcement {
-      margin-top: 12px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-
-    .edit-announcement .el-input {
-      flex: 1 1 300px;
-      min-width: 200px;
-    }
-
-    .device-card {
-      border-radius: 14px;
-      box-shadow: 0 8px 20px rgb(0 0 0 / 0.05);
-      transition: transform 0.2s ease, box-shadow 0.3s ease;
-      cursor: pointer;
-      background: #fff;
-      padding: 18px 24px;
-      margin-bottom: 20px;
-    }
-
-    .device-card:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 20px 40px rgb(0 0 0 / 0.12);
-    }
-
-    .device-title {
-      font-size: 18px;
+    /* 标题 */
+    h1 {
       font-weight: 600;
-      margin-bottom: 6px;
-      color: #111;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-size: 28px;
+      margin-bottom: 24px;
+      user-select: text;
+      color: #1d1d1f;
+      letter-spacing: 0.02em;
     }
 
-    .device-info {
-      font-size: 14px;
-      color: #666;
+    /* 公告栏 */
+    .announcement {
+      background: #f5f5f7;
+      border-radius: 14px;
+      padding: 14px 20px;
+      margin-bottom: 32px;
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.05);
+      color: #6e6e73;
+      font-weight: 400;
+      font-size: 15px;
+      user-select: text;
       line-height: 1.4;
+      cursor: default;
+      transition: background-color 0.3s ease;
     }
 
-    .loading-text,
-    .no-more-text {
-      text-align: center;
-      margin: 20px 0;
-      color: #999;
-      font-weight: 500;
+    .announcement:focus-within {
+      background: #e9e9ec;
+    }
+
+    .announcement-editable {
+      margin-top: 8px;
+      width: 100%;
+    }
+
+    /* 设备列表 */
+    .device-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      user-select: text;
+    }
+
+    .device-item {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 4px 15px rgb(0 0 0 / 0.07);
+      padding: 18px 24px;
+      margin-bottom: 18px;
+      cursor: pointer;
+      transition: box-shadow 0.25s ease, transform 0.2s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .device-item:hover {
+      box-shadow: 0 8px 28px rgb(0 0 0 / 0.12);
+      transform: translateY(-3px);
+    }
+
+    .device-name {
+      font-weight: 600;
+      font-size: 20px;
+      color: #1d1d1f;
+      margin-bottom: 6px;
+      line-height: 1.2;
+      user-select: text;
+    }
+
+    .device-location {
+      font-size: 14px;
+      font-weight: 400;
+      color: #6e6e73;
+      user-select: text;
+      letter-spacing: 0.01em;
+    }
+
+    /* 按钮 */
+    .edit-btn {
+      margin-top: 10px;
+      width: 110px;
+    }
+
+    /* 编辑密码框 */
+    .password-input {
+      margin-top: 8px;
+      margin-bottom: 20px;
+      max-width: 320px;
+      user-select: text;
+    }
+
+    /* 编辑公告区域 */
+    .edit-area {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid #d1d1d6;
+      padding: 10px 14px;
+      font-size: 15px;
+      font-weight: 400;
+      color: #1d1d1f;
+      resize: vertical;
+      min-height: 50px;
+      font-family: inherit;
+      user-select: text;
+      outline: none;
+      transition: border-color 0.25s ease;
+    }
+
+    .edit-area:focus {
+      border-color: #0071e3;
+      box-shadow: 0 0 6px #0071e3aa;
     }
 
     /* 响应式调整 */
-    @media (max-width: 600px) {
-      .device-card {
+    @media (max-width: 440px) {
+      body {
+        padding: 16px 12px;
+      }
+      .device-item {
         padding: 14px 18px;
       }
-
-      .device-title {
-        font-size: 16px;
+      .device-name {
+        font-size: 18px;
       }
-
-      body {
-        padding: 12px;
+      .device-location {
+        font-size: 13px;
       }
     }
   </style>
@@ -103,97 +160,60 @@
 
 <body>
   <div id="app">
-    <!-- 密码输入区域 -->
-    <el-card v-if="!unlocked" class="announcement-bar" shadow="hover" style="max-width:400px; margin: 40px auto;">
-      <h3 style="text-align:center; margin-bottom:20px;">请输入访问密码</h3>
-      <el-input
-        v-model="inputPassword"
-        placeholder="请输入密码"
-        show-password
-        @keyup.enter.native="checkPassword"
-      ></el-input>
-      <el-button
-        type="primary"
-        block
-        style="margin-top:16px"
-        @click="checkPassword"
-      >确定</el-button>
-    </el-card>
+    <h1>设备管理主页</h1>
+
+    <!-- 公告栏 -->
+    <div
+      tabindex="0"
+      class="announcement"
+      v-if="!editingAnnouncement"
+      @dblclick="startEditAnnouncement"
+      title="双击编辑公告"
+      role="region"
+      aria-label="公告栏"
+    >
+      <div v-for="(item, idx) in announcements" :key="idx" style="margin-bottom: 8px;" v-text="item"></div>
+      <div style="font-size: 13px; color: #999;">（双击此处编辑公告，最多三条）</div>
+    </div>
 
     <div v-else>
-      <!-- 公告栏 -->
-      <el-card shadow="hover" class="announcement-bar">
-        <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 8px;">
-          <h3 style="margin: 0; font-weight: 600;">公告栏</h3>
-          <el-button size="mini" @click="editAnnouncementMode = !editAnnouncementMode">
-            {{ editAnnouncementMode ? '取消编辑' : '编辑公告' }}
-          </el-button>
-        </div>
-
-        <div v-if="!editAnnouncementMode" class="announcement-list">
-          <el-alert
-            v-for="(item, idx) in announcements.slice(0, 3)"
-            :key="idx"
-            type="info"
-            :title="item"
-            show-icon
-            :closable="false"
-            style="border-radius: 8px;"
-          ></el-alert>
-        </div>
-
-        <div v-else>
-          <el-input
-            v-for="(item, idx) in announcements"
-            :key="idx"
-            v-model="announcementEdits[idx]"
-            placeholder="编辑公告内容"
-            clearable
-            style="margin-bottom: 8px;"
-            maxlength="60"
-          ></el-input>
-          <el-input
-            v-if="announcementEdits.length < 3"
-            v-model="newAnnouncement"
-            placeholder="新增公告内容"
-            maxlength="60"
-            clearable
-            style="margin-bottom: 8px;"
-          ></el-input>
-          <el-input
-            type="password"
-            v-model="announcementEditPassword"
-            placeholder="请输入编辑密码"
-            show-password
-            style="margin-bottom: 12px;"
-          ></el-input>
-          <el-button type="primary" @click="saveAnnouncements">保存公告</el-button>
-        </div>
-      </el-card>
-
-      <!-- 设备列表 -->
+      <textarea
+        class="edit-area"
+        v-model="announcementText"
+        placeholder="请输入公告，分行显示，最多三条"
+        rows="4"
+        maxlength="150"
+      ></textarea>
+      <el-input
+        v-model="editPassword"
+        class="password-input"
+        type="password"
+        placeholder="请输入编辑密码"
+        show-password
+        clearable
+      ></el-input>
       <div>
-        <el-row :gutter="20">
-          <el-col
-            :xs="24"
-            :sm="12"
-            :md="8"
-            v-for="device in visibleDevices"
-            :key="device.id"
-          >
-            <div class="device-card" @click="goToDevice(device.id)" role="button" tabindex="0">
-              <div class="device-title" :title="device.name">{{ device.name || '未命名设备' }}</div>
-              <div class="device-info"><strong>位置：</strong>{{ device.location || '未知' }}</div>
-              <div class="device-info"><strong>购买日期：</strong>{{ formatDate(device.purchase_date) }}</div>
-              <div class="device-info"><strong>安装日期：</strong>{{ formatDate(device.install_date) }}</div>
-            </div>
-          </el-col>
-        </el-row>
-
-        <div v-if="loadingMore" class="loading-text">加载中...</div>
-        <div v-if="!hasMore" class="no-more-text">没有更多设备了</div>
+        <el-button size="small" type="primary" @click="saveAnnouncement">保存</el-button>
+        <el-button size="small" @click="cancelEditAnnouncement">取消</el-button>
       </div>
     </div>
+
+    <!-- 设备列表 -->
+    <ul class="device-list" aria-label="设备列表">
+      <li
+        class="device-item"
+        v-for="device in devices"
+        :key="device.id"
+        role="listitem"
+        @click="goToDevice(device.id)"
+        tabindex="0"
+        @keydown.enter.space.prevent="goToDevice(device.id)"
+        aria-describedby="device-location-{{device.id}}"
+      >
+        <div class="device-name" v-text="device.name || '未命名设备'"></div>
+        <div class="device-location" :id="'device-location-' + device.id" v-text="'位置: ' + (device.location || '未知')"></div>
+      </li>
+    </ul>
   </div>
 
   <script src="https://unpkg.com/vue@2"></script>
@@ -211,158 +231,64 @@
       appId: "1:648686550801:web:2f460487e32914042316b0",
       measurementId: "G-44L5PHN36Y",
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     new Vue({
       el: "#app",
       data: {
-        inputPassword: "",
-        unlocked: false,
         devices: [],
-        visibleDevices: [],
-        announcements: [],
-        announcementEdits: [],
-        newAnnouncement: "",
-        announcementEditPassword: "",
-        editAnnouncementMode: false,
-        pageSize: 6,
-        loadingMore: false,
-        hasMore: true,
-        lastIndex: 0,
+        announcements: ["设备维护请联系技术部", "周三将进行全网巡检", "请及时更新维护记录"],
+        editingAnnouncement: false,
+        announcementText: "",
+        editPassword: "",
       },
       created() {
-        // 监听滚动加载更多设备
-        window.addEventListener("scroll", this.handleScroll);
-
-        // 先默认解锁，调试时方便
-        // this.unlocked = true;
-        // this.loadDevices();
-
-        // 从数据库加载公告
-        this.loadAnnouncements();
-      },
-      beforeDestroy() {
-        window.removeEventListener("scroll", this.handleScroll);
+        this.loadDevices();
       },
       methods: {
-        checkPassword() {
-          if (this.inputPassword === "123456") {
-            this.unlocked = true;
-            this.loadDevices();
-          } else {
-            this.$message.error("密码错误");
-          }
-        },
         async loadDevices() {
-          this.loadingMore = true;
           try {
             const snapshot = await db.ref("devices").once("value");
-            const raw = snapshot.val() || {};
-            this.devices = Object.entries(raw).map(([id, val]) => {
-              return {
-                id,
-                purchase_date: val.purchase_date || val.purchase || null,
-                install_date: val.install_date || val.purchase_date || val.purchase || null,
-                location: val.location || "",
-                name: val.name || "",
-              };
-            });
-            this.appendDevices();
+            const data = snapshot.val() || {};
+            this.devices = Object.entries(data).map(([id, val]) => ({ id, ...val }));
           } catch (e) {
-            this.$message.error("加载设备失败");
-          } finally {
-            this.loadingMore = false;
-          }
-        },
-        appendDevices() {
-          if (this.lastIndex >= this.devices.length) {
-            this.hasMore = false;
-            return;
-          }
-          this.loadingMore = true;
-          setTimeout(() => {
-            const next = this.devices.slice(
-              this.lastIndex,
-              this.lastIndex + this.pageSize
-            );
-            this.visibleDevices = this.visibleDevices.concat(next);
-            this.lastIndex += this.pageSize;
-            this.loadingMore = false;
-          }, 350);
-        },
-        handleScroll() {
-          const scrollBottom =
-            window.innerHeight + window.scrollY >=
-            document.body.offsetHeight - 40;
-          if (scrollBottom && !this.loadingMore && this.hasMore && this.unlocked) {
-            this.appendDevices();
+            console.error("加载设备失败", e);
           }
         },
         goToDevice(id) {
           window.location.href = `detail.html?id=${id}`;
         },
-        formatDate(date) {
-          if (!date) return "未知";
-          if (date.length === 8 && /^\d{8}$/.test(date)) {
-            // 20230804 => 2023-08-04
-            return `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6)}`;
-          }
-          return date;
+        startEditAnnouncement() {
+          this.announcementText = this.announcements.join("\n");
+          this.editingAnnouncement = true;
+          this.$nextTick(() => {
+            const textarea = document.querySelector(".edit-area");
+            if (textarea) textarea.focus();
+          });
         },
-        async loadAnnouncements() {
-          try {
-            const snapshot = await db.ref("announcements").once("value");
-            const raw = snapshot.val() || [];
-            if (Array.isArray(raw)) {
-              this.announcements = raw;
-              this.announcementEdits = [...raw];
-            } else {
-              // 兼容对象形式
-              this.announcements = Object.values(raw);
-              this.announcementEdits = Object.values(raw);
-            }
-          } catch {
-            this.announcements = [
-              "设备维护请联系技术部",
-              "周三将进行全网巡检",
-              "请及时更新维护记录",
-            ];
-            this.announcementEdits = [...this.announcements];
-          }
-        },
-        async saveAnnouncements() {
-          if (this.announcementEditPassword !== "123456") {
+        async saveAnnouncement() {
+          if (this.editPassword !== "123456") {
             this.$message.error("编辑密码错误");
             return;
           }
-          // 过滤空公告
-          let finalList = this.announcementEdits
-            .map((a) => a.trim())
-            .filter((a) => a.length > 0);
+          // 拆行取前3条，不允许空行
+          const lines = this.announcementText
+            .split("\n")
+            .map((l) => l.trim())
+            .filter((l) => l.length > 0)
+            .slice(0, 3);
+          this.announcements = lines.length ? lines : ["暂无公告"];
+          this.editingAnnouncement = false;
+          this.editPassword = "";
+          this.$message.success("公告更新成功");
 
-          // 新增公告合并
-          if (this.newAnnouncement.trim()) {
-            finalList.push(this.newAnnouncement.trim());
-          }
-
-          if (finalList.length > 3) {
-            this.$message.warning("最多允许添加3条公告");
-            return;
-          }
-
-          try {
-            await db.ref("announcements").set(finalList);
-            this.announcements = [...finalList];
-            this.announcementEdits = [...finalList];
-            this.newAnnouncement = "";
-            this.editAnnouncementMode = false;
-            this.announcementEditPassword = "";
-            this.$message.success("公告保存成功");
-          } catch {
-            this.$message.error("保存公告失败");
-          }
+          // 这里你可以把公告存到 Firebase 或其他存储
+          // await db.ref('announcements').set(this.announcements);
+        },
+        cancelEditAnnouncement() {
+          this.editingAnnouncement = false;
+          this.editPassword = "";
         },
       },
     });
