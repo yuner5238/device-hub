@@ -287,11 +287,11 @@
             :key="device.id"
             class="device-card"
             @click="goToDevice(device.id)"
-            :title="device.note || '无备注'"
+            :title="device.notes || '无备注'"
           >
             <div class="device-name">{{ device.name }}</div>
             <div class="device-location">{{ device.location || '未知位置' }}</div>
-            <div class="device-note">{{ device.note || '无备注' }}</div>
+            <div class="device-note">{{ device.notes || '无备注' }}</div>
           </div>
         </div>
         <div v-if="loadingDevices" class="loading-more">加载中...</div>
@@ -377,7 +377,7 @@
                 id: childSnap.key,
                 name: val.name || "",
                 location: val.location || "",
-                note: val.note || ""
+                notes: val.notes || ""
               });
             });
             this.devices = devices;
@@ -399,7 +399,7 @@
                 id: childSnap.key,
                 name: childSnap.val().name || "",
                 location: childSnap.val().location || "",
-                note: childSnap.val().note || ""
+                notes: childSnap.val().notes || ""
               });
             });
             if (devices.length > 0 && devices[0].id === lastKey) {
