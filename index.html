@@ -3,309 +3,112 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Device Hub - 首页</title>
+  <title>设备管理系统 - 首页</title>
   <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css" />
   <style>
-    /* 基础字体和苹果系统风格 */
     body {
-      margin: 0; padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
-      background: #fff;
-      color: #1d1d1f;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      line-height: 1.5;
-      font-weight: 400;
-      font-size: 17px;
+      background-color: #f5f5f7;
+      margin: 0; padding: 0;
     }
-    #app {
+    .container {
       max-width: 900px;
-      margin: 40px auto;
-      padding: 0 24px;
+      margin: 0 auto;
+      padding: 20px;
     }
-    h1 {
-      font-weight: 600;
-      font-size: 34px;
-      letter-spacing: -0.03em;
-      margin-bottom: 24px;
-      user-select: none;
-    }
-    /* 输入密码覆盖全屏（本版本隐藏） */
-    #password-cover {
-      position: fixed;
-      inset: 0;
-      background: #fff;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      user-select: none;
-    }
-    #password-cover h2 {
-      font-weight: 600;
-      font-size: 24px;
-      margin-bottom: 16px;
-      color: #1d1d1f;
-    }
-    #password-cover .el-input {
-      width: 280px;
-      margin-bottom: 12px;
-    }
-    #password-error {
-      color: #e03e2f;
-      font-size: 14px;
-      height: 18px;
-      margin-bottom: 12px;
-    }
-    /* 公告栏样式 */
-    .announcements {
-      border: 1px solid #d2d2d7;
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 48px;
-      box-shadow: 0 4px 12px rgb(0 0 0 / 0.05);
-      background: #f5f5f7;
-      user-select: none;
-    }
-    .announcements h2 {
-      margin: 0 0 16px 0;
-      font-weight: 700;
-      font-size: 24px;
-      color: #1d1d1f;
-      letter-spacing: -0.02em;
-    }
-    .announcement-item {
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #d2d2d7;
-    }
-    .announcement-item:last-child {
-      border-bottom: none;
-      margin-bottom: 0;
-      padding-bottom: 0;
-    }
-    .announcement-title {
-      font-weight: 600;
-      font-size: 18px;
-      color: #0071e3;
-      margin-bottom: 6px;
-    }
-    .announcement-content {
-      font-size: 16px;
-      color: #3c3c4399;
-      line-height: 1.4;
-      white-space: pre-wrap;
-    }
-    .announcement-date {
-      font-size: 13px;
-      color: #6e6e73;
-      margin-top: 4px;
-      user-select: text;
-    }
-    .edit-announcement-btn {
-      margin-top: 8px;
-      color: #0071e3;
-      font-weight: 600;
-      cursor: pointer;
-      user-select: none;
-    }
-    /* 编辑公告弹窗 */
-    .announcement-editor-group {
-      border: 1px solid #d2d2d7;
-      border-radius: 12px;
+    .announcement {
       background: white;
+      border-radius: 12px;
       padding: 16px;
-      margin-bottom: 24px;
-      box-shadow: 0 2px 6px rgb(0 0 0 / 0.1);
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
     }
-    .announcement-editor-group h3 {
-      margin-top: 0;
-      font-weight: 600;
-      font-size: 18px;
-      color: #0071e3;
+    .announcement-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 12px;
-      user-select: none;
     }
-    /* 设备列表容器 */
-    .device-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 24px;
-      user-select: none;
+    .announcement h2 {
+      font-size: 20px;
+      margin: 0;
+      font-weight: 600;
     }
-    /* 设备卡片 */
-    .device-card {
-      background: #f5f5f7;
-      border-radius: 18px;
-      width: calc(50% - 12px);
-      padding: 20px 24px;
-      box-shadow: 0 8px 24px rgb(0 0 0 / 0.08);
+    .edit-button {
+      font-size: 14px;
       cursor: pointer;
-      transition: box-shadow 0.3s ease;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      user-select: none;
+      color: #409EFF;
     }
-    .device-card:hover {
-      box-shadow: 0 16px 32px rgb(0 0 0 / 0.15);
+    .device-list {
+      background: white;
+      border-radius: 12px;
+      padding: 0;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+    .device-item {
+      padding: 16px 20px;
+      border-bottom: 1px solid #eee;
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+    .device-item:hover {
+      background: #fafafa;
     }
     .device-name {
-      font-weight: 600;
-      font-size: 20px;
-      color: #1d1d1f;
-      margin-bottom: 8px;
-      letter-spacing: -0.01em;
-      user-select: text;
+      font-size: 17px;
+      font-weight: 500;
     }
-    .device-location {
+    .device-meta {
+      color: #888;
       font-size: 14px;
-      color: #6e6e73;
-      margin-bottom: 4px;
-      user-select: text;
+      margin-top: 6px;
     }
-    .device-note {
-      font-size: 15px;
-      color: #3c3c4399;
-      flex-grow: 1;
-      user-select: text;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      overflow: hidden;
+    .device-notes {
+      font-size: 13px;
+      color: #666;
+      margin-top: 4px;
     }
-    /* 加载中 */
-    .loading-more {
-      text-align: center;
-      color: #6e6e73;
-      margin: 24px 0;
-      font-size: 15px;
-      user-select: none;
-    }
-    /* 编辑公告按钮 */
-    #btn-edit-announcements {
-      display: inline-block;
-      margin-bottom: 12px;
-      color: #0071e3;
-      font-weight: 600;
-      cursor: pointer;
-      user-select: none;
-    }
-    /* 手机响应 */
-    @media (max-width: 700px) {
-      .device-card {
-        width: 100%;
+    @media (max-width: 600px) {
+      .device-item {
+        padding: 12px 16px;
       }
-      #app {
-        margin: 24px 16px;
-      }
-      h1 {
-        font-size: 28px;
+      .device-name {
+        font-size: 16px;
       }
     }
   </style>
 </head>
 <body>
-  <div id="app">
-    <!-- 关闭访问密码输入界面 -->
-    <div v-if="!hasAccess" style="display:none;" id="password-cover">
-      <h2>请输入访问密码</h2>
-      <el-input
-        v-model="accessPassword"
-        placeholder="请输入密码"
-        show-password
-        @keyup.enter.native="checkPassword"
-        clearable
-        autofocus
-      ></el-input>
-      <div id="password-error" v-if="accessError">{{ accessError }}</div>
-      <el-button type="primary" @click="checkPassword">确认</el-button>
+  <div id="app" class="container">
+    <div class="announcement">
+      <div class="announcement-header">
+        <h2>📢 公告栏</h2>
+        <span class="edit-button" @click="editAnnouncement">编辑</span>
+      </div>
+      <div v-for="(item, key) in announcements" :key="key" style="margin-bottom: 8px;">
+        <strong>{{ item.title }}</strong><br />
+        <span>{{ item.content }}</span><br />
+        <small style="color: #999;">{{ item.date }}</small>
+      </div>
     </div>
 
-    <div v-else>
-      <h1>设备中心</h1>
-
-      <section class="announcements">
-        <div style="display:flex; justify-content: space-between; align-items: center;">
-          <h2>公告栏</h2>
-          <div id="btn-edit-announcements" @click="tryEditAnnouncements">编辑公告</div>
-        </div>
-
-        <template v-if="!editingAnnouncements">
-          <div v-for="(ann, idx) in displayedAnnouncements" :key="ann.date" class="announcement-item">
-            <div class="announcement-title">{{ ann.title }}</div>
-            <div class="announcement-content">{{ ann.content }}</div>
-            <div class="announcement-date">{{ formatDate(ann.date) }}</div>
-          </div>
-        </template>
-
-        <template v-else>
-          <div v-for="(ann, idx) in announcements" :key="ann.date" class="announcement-editor-group">
-            <h3>公告 {{ idx + 1 }}</h3>
-            <el-input
-              v-model="ann.title"
-              placeholder="标题"
-              maxlength="50"
-              show-word-limit
-              clearable
-            ></el-input>
-            <el-input
-              type="textarea"
-              v-model="ann.content"
-              placeholder="内容"
-              rows="3"
-              clearable
-              style="margin-top: 8px"
-            ></el-input>
-            <el-date-picker
-              v-model="ann.date"
-              type="date"
-              placeholder="日期"
-              format="yyyy-MM-dd"
-              value-format="yyyy-MM-dd"
-              style="margin-top: 8px; width: 100%;"
-            ></el-date-picker>
-            <el-button
-              type="danger"
-              size="small"
-              style="margin-top: 8px;"
-              @click="removeAnnouncement(idx)"
-            >删除</el-button>
-          </div>
-          <el-button type="primary" @click="addAnnouncement" style="margin-bottom: 24px;">添加公告</el-button>
-          <div>
-            <el-button type="primary" @click="saveAnnouncements" :loading="savingAnnouncements">保存</el-button>
-            <el-button @click="cancelEditAnnouncements" style="margin-left: 12px;">取消</el-button>
-          </div>
-        </template>
-      </section>
-
-      <section>
-        <div class="device-list">
-          <div
-            v-for="device in visibleDevices"
-            :key="device.id"
-            class="device-card"
-            @click="goToDevice(device.id)"
-            :title="device.note || '无备注'"
-          >
-            <div class="device-name">{{ device.name }}</div>
-            <div class="device-location">{{ device.location || '未知位置' }}</div>
-            <div class="device-note">{{ device.note || '无备注' }}</div>
-          </div>
-        </div>
-        <div v-if="loadingDevices" class="loading-more">加载中...</div>
-        <div v-if="noMoreDevices" class="loading-more">已加载全部设备</div>
-      </section>
+    <div class="device-list">
+      <div v-for="device in displayedDevices" :key="device.key" class="device-item" @click="goToDevice(device.key)">
+        <div class="device-name">{{ device.name }}</div>
+        <div class="device-meta">{{ device.location }} · 采购日期: {{ device.purchase_date }}</div>
+        <div v-if="device.notes" class="device-notes">备注：{{ device.notes }}</div>
+      </div>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://unpkg.com/element-ui/lib/index.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <script>
-    // Firebase 配置，请替换为你的实际配置
+    // Firebase 配置（已自动填入）
     const firebaseConfig = {
       apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
       authDomain: "device-hub-5238.firebaseapp.com",
@@ -316,196 +119,135 @@
       appId: "1:648686550801:web:2f460487e32914042316b0",
       measurementId: "G-44L5PHN36Y"
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     new Vue({
-      el: "#app",
+      el: '#app',
       data: {
-        hasAccess: true,  // 首页访问权限关闭，直接允许访问
-        // 以下访问密码相关变量废弃，无用
-        accessPassword: "",
-        accessError: "",
-
-        announcements: [],
-        displayedAnnouncements: [],
-        editingAnnouncements: false,
-        savingAnnouncements: false,
-
+        announcements: {},
         devices: [],
-        visibleDevices: [],
-        devicesBatchSize: 12,
-        devicesLoadedCount: 0,
-        loadingDevices: false,
-        noMoreDevices: false,
-
-        announcementEditPassword: "123456",
+        displayedDevices: [],
+        devicesPerPage: 10,
+        currentPage: 0,
+        hasMore: true,
+        announcementEditPassword: '123456',
+        observer: null
       },
-      mounted() {
-        this.loadData();
-        window.addEventListener("scroll", this.onScroll);
+      created() {
+        this.fetchAnnouncements();
+        this.fetchDevices();
+        window.addEventListener('scroll', this.onScroll);
       },
       beforeDestroy() {
-        window.removeEventListener("scroll", this.onScroll);
+        window.removeEventListener('scroll', this.onScroll);
       },
       methods: {
-        // 加载公告和设备
-        loadData() {
-          this.loadAnnouncements();
-          this.loadDevices();
-        },
-
-        loadAnnouncements() {
-          db.ref("announcements").orderByChild("date").limitToLast(3).once("value", (snapshot) => {
-            let arr = [];
-            snapshot.forEach(childSnap => {
-              arr.push(childSnap.val());
-            });
-            arr.sort((a, b) => (a.date < b.date ? 1 : -1));
-            this.announcements = arr;
-            this.displayedAnnouncements = arr.slice(0, 3);
+        fetchAnnouncements() {
+          db.ref('announcements').orderByKey().limitToLast(3).once('value').then(snapshot => {
+            let data = snapshot.val() || {};
+            let arr = Object.entries(data).map(([key, val]) => val);
+            arr.sort((a, b) => new Date(b.date) - new Date(a.date));
+            this.announcements = arr.slice(0, 3);
           });
         },
-
-        loadDevices() {
-          this.loadingDevices = true;
-          db.ref("devices").orderByKey().limitToFirst(this.devicesBatchSize).once("value", (snapshot) => {
+        fetchDevices() {
+          db.ref().once('value').then(snapshot => {
+            const data = snapshot.val() || {};
             const devices = [];
-            snapshot.forEach(childSnap => {
-              const val = childSnap.val();
-              devices.push({
-                id: childSnap.key,
-                name: val.name || "",
-                location: val.location || "",
-                note: val.note || ""
-              });
-            });
-            this.devices = devices;
-            this.visibleDevices = devices;
-            this.devicesLoadedCount = devices.length;
-            this.noMoreDevices = devices.length < this.devicesBatchSize;
-            this.loadingDevices = false;
-          });
-        },
-
-        loadMoreDevices() {
-          if (this.loadingDevices || this.noMoreDevices) return;
-          this.loadingDevices = true;
-          const lastKey = this.devices[this.devices.length - 1]?.id || "";
-          db.ref("devices").orderByKey().startAt(lastKey).limitToFirst(this.devicesBatchSize + 1).once("value", (snapshot) => {
-            let devices = [];
-            snapshot.forEach(childSnap => {
-              devices.push({
-                id: childSnap.key,
-                name: childSnap.val().name || "",
-                location: childSnap.val().location || "",
-                note: childSnap.val().note || ""
-              });
-            });
-            if (devices.length > 0 && devices[0].id === lastKey) {
-              devices.shift();
-            }
-            if (devices.length === 0) {
-              this.noMoreDevices = true;
-            } else {
-              this.devices = this.devices.concat(devices);
-              this.visibleDevices = this.devices;
-              this.devicesLoadedCount += devices.length;
-              if (devices.length < this.devicesBatchSize) {
-                this.noMoreDevices = true;
+            for (const key in data) {
+              if (key === 'announcements') continue;
+              const dev = data[key];
+              if (dev && dev.name && dev.location && dev.purchase_date) {
+                devices.push({ ...dev, key });
               }
             }
-            this.loadingDevices = false;
+            devices.sort((a, b) => a.key.localeCompare(b.key));
+            this.devices = devices;
+            this.loadMore();
           });
         },
-
+        loadMore() {
+          if (!this.hasMore) return;
+          const start = this.currentPage * this.devicesPerPage;
+          const end = start + this.devicesPerPage;
+          const nextBatch = this.devices.slice(start, end);
+          if (nextBatch.length === 0) {
+            this.hasMore = false;
+            return;
+          }
+          this.displayedDevices = this.displayedDevices.concat(nextBatch);
+          this.currentPage++;
+          this.hasMore = this.devices.length > this.displayedDevices.length;
+        },
         onScroll() {
-          const scrollTop = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
-          const windowHeight = window.innerHeight;
-          const fullHeight = document.documentElement.scrollHeight;
-          if (scrollTop + windowHeight > fullHeight - 120) {
-            this.loadMoreDevices();
+          const scrollY = window.scrollY || window.pageYOffset;
+          const visibleHeight = window.innerHeight;
+          const pageHeight = document.documentElement.scrollHeight;
+          if (scrollY + visibleHeight + 100 >= pageHeight) {
+            this.loadMore();
           }
         },
-
-        formatDate(dateStr) {
-          if (!dateStr) return "";
-          const d = new Date(dateStr);
-          if (isNaN(d)) return dateStr;
-          return d.toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" });
+        goToDevice(key) {
+          window.location.href = `device.html?id=${encodeURIComponent(key)}`;
         },
-
-        tryEditAnnouncements() {
-          this.$prompt('请输入编辑密码', '验证', {
-            inputType: 'password',
-            inputPlaceholder: '请输入密码',
-            confirmButtonText: '确认',
+        editAnnouncement() {
+          this.$prompt('请输入编辑密码', '密码验证', {
+            confirmButtonText: '确定',
             cancelButtonText: '取消',
+            inputType: 'password',
+            inputPlaceholder: '请输入密码'
           }).then(({ value }) => {
             if (value === this.announcementEditPassword) {
-              this.startEditAnnouncements();
+              this.openAnnouncementEditor();
             } else {
-              this.$message.error("密码错误");
+              this.$message.error('密码错误');
             }
           }).catch(() => {});
         },
+        openAnnouncementEditor() {
+          let promises = [];
+          for (let i = 0; i < this.announcements.length; i++) {
+            let ann = this.announcements[i];
+            promises.push(this.$prompt(`编辑公告标题（第${i + 1}条）`, '编辑公告', {
+              confirmButtonText: '确定',
+              cancelButtonText: '跳过',
+              inputValue: ann.title,
+              inputPlaceholder: '标题'
+            }).then(({ value }) => {
+              ann.title = value;
+              return this.$prompt(`编辑公告内容（第${i + 1}条）`, '编辑公告', {
+                confirmButtonText: '确定',
+                cancelButtonText: '跳过',
+                inputValue: ann.content,
+                inputPlaceholder: '内容'
+              }).then(({ value }) => {
+                ann.content = value;
+                return ann;
+              });
+            }).catch(() => ann));
+          }
 
-        startEditAnnouncements() {
-          this.editingAnnouncements = true;
-          this.announcements = JSON.parse(JSON.stringify(this.announcements));
-        },
-
-        cancelEditAnnouncements() {
-          this.editingAnnouncements = false;
-          this.loadAnnouncements();
-        },
-
-        addAnnouncement() {
-          this.announcements.unshift({
-            title: "",
-            content: "",
-            date: new Date().toISOString().slice(0, 10),
-          });
-        },
-
-        removeAnnouncement(idx) {
-          this.announcements.splice(idx, 1);
-        },
-
-        saveAnnouncements() {
-          if (this.savingAnnouncements) return;
-          this.savingAnnouncements = true;
-
-          // 清理无标题或无内容公告
-          this.announcements = this.announcements.filter(ann => ann.title.trim() && ann.content.trim());
-
-          const updates = {};
-          // 先删除全部旧公告，再写入新公告
-          // 这里简单策略：先清空节点，再批量写入
-          db.ref("announcements").remove().then(() => {
-            this.announcements.forEach((ann, idx) => {
-              const key = `announcement_${idx + 1}_${Date.now()}`;
-              updates[key] = {
-                title: ann.title,
-                content: ann.content,
-                date: ann.date
-              };
+          Promise.all(promises).then(results => {
+            db.ref('announcements').once('value').then(snapshot => {
+              const allAnnouncements = snapshot.val() || {};
+              const keys = Object.keys(allAnnouncements).sort();
+              let updates = {};
+              for (let i = 0; i < results.length; i++) {
+                if (i >= keys.length) break;
+                updates[`announcements/${keys[i]}/title`] = results[i].title;
+                updates[`announcements/${keys[i]}/content`] = results[i].content;
+              }
+              db.ref().update(updates).then(() => {
+                this.$message.success('公告已更新');
+                this.fetchAnnouncements();
+              }).catch(() => {
+                this.$message.error('更新失败');
+              });
             });
-            return db.ref("announcements").update(updates);
-          }).then(() => {
-            this.$message.success("公告保存成功");
-            this.editingAnnouncements = false;
-            this.loadAnnouncements();
-          }).catch(err => {
-            this.$message.error("保存失败：" + err.message);
-          }).finally(() => {
-            this.savingAnnouncements = false;
           });
-        },
-
-        goToDevice(id) {
-          window.location.href = `device.html?id=${encodeURIComponent(id)}`;
-        },
+        }
       }
     });
   </script>
