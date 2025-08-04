@@ -3,176 +3,152 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>设备详情</title>
-  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css" />
+  <script src="https://unpkg.com/vue@2"></script>
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/element-ui/lib/theme-chalk/index.css"
+  />
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body {
-      margin: 0;
-      background: #fafafa;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-        sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      padding: 16px;
+      padding: 20px;
+      background: #f5f5f7;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+        Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .title {
+      font-weight: 700;
+      font-size: 24px;
       color: #111;
     }
 
-    #app {
-      max-width: 480px;
-      margin: 0 auto;
-      background: white;
-      border-radius: 14px;
-      box-shadow: 0 10px 30px rgb(0 0 0 / 0.07);
-      padding: 24px 28px;
-    }
-
-    h2 {
-      font-weight: 700;
-      font-size: 26px;
-      margin-bottom: 16px;
-      color: #222;
-      user-select: none;
-    }
-
-    .field-label {
+    .form-label {
       font-weight: 600;
-      color: #555;
-      margin-bottom: 6px;
-      user-select: none;
+      color: #444;
     }
 
-    .field-value {
-      font-size: 16px;
-      color: #333;
-      user-select: text;
-      word-break: break-word;
+    .el-card {
+      border-radius: 14px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+      background: white;
+      padding: 24px 32px;
     }
 
-    .edit-btn-group {
-      margin-top: 20px;
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
+    .el-button {
+      border-radius: 8px;
     }
 
-    .el-input,
-    .el-date-picker {
-      width: 100%;
-      margin-bottom: 18px;
-    }
-
-    .password-input {
-      margin-top: 12px;
-      margin-bottom: 18px;
-    }
-
-    /* 响应式调整 */
-    @media (max-width: 480px) {
-      #app {
-        margin: 12px;
-        padding: 18px 20px;
+    @media (max-width: 600px) {
+      body {
+        padding: 14px;
       }
 
-      h2 {
-        font-size: 22px;
+      .container {
+        max-width: 100%;
+      }
+
+      .title {
+        font-size: 20px;
       }
     }
   </style>
 </head>
 
 <body>
-  <div id="app">
-    <h2>{{ device.name || "未命名设备" }}</h2>
+  <div id="app" class="container">
+    <div class="header">
+      <div class="title">设备详情</div>
+      <el-button type="primary" @click="goHome">主页</el-button>
+    </div>
 
-    <template v-if="!editMode">
-      <div>
-        <div class="field-label">位置</div>
-        <div class="field-value">{{ device.location || "未知" }}</div>
-      </div>
-      <div>
-        <div class="field-label">购买日期</div>
-        <div class="field-value">{{ formatDate(device.purchase_date) }}</div>
-      </div>
-      <div>
-        <div class="field-label">安装日期</div>
-        <div class="field-value">{{ formatDate(device.install_date) }}</div>
-      </div>
-      <div>
-        <div class="field-label">备注</div>
-        <div class="field-value" style="white-space: pre-wrap;">{{ device.remark || "-" }}</div>
+    <el-card v-loading="loading">
+      <div v-if="!device">
+        <el-alert title="未找到设备" type="error"></el-alert>
       </div>
 
-      <div class="edit-btn-group">
-        <el-button type="primary" @click="editMode = true">编辑</el-button>
-        <el-button @click="goBack">返回</el-button>
-      </div>
-    </template>
+      <div v-else>
+        <el-form
+          :model="device"
+          label-width="130px"
+          label-position="left"
+          v-if="!editMode"
+        >
+          <el-form-item label="设备名称">
+            <span>{{ device.name || "N/A" }}</span>
+          </el-form-item>
+          <el-form-item label="位置">
+            <span>{{ device.location || "N/A" }}</span>
+          </el-form-item>
+          <el-form-item label="购买日期">
+            <span>{{ device.purchase_date || "N/A" }}</span>
+          </el-form-item>
+          <el-form-item label="安装日期">
+            <span>{{ device.install_date || device.purchase_date || "N/A" }}</span>
+          </el-form-item>
+          <el-form-item label="备注">
+            <span>{{ device.notes || "无" }}</span>
+          </el-form-item>
+        </el-form>
 
-    <template v-else>
-      <el-form :model="editDevice" label-position="top" size="medium" ref="form">
-        <el-form-item label="设备名称">
-          <el-input v-model="editDevice.name" maxlength="60" clearable></el-input>
-        </el-form-item>
+        <el-form
+          :model="editForm"
+          label-width="130px"
+          label-position="left"
+          v-else
+        >
+          <el-form-item label="位置">
+            <el-input v-model="editForm.location"></el-input>
+          </el-form-item>
+          <el-form-item label="购买日期">
+            <el-input v-model="editForm.purchase_date" placeholder="YYYY-MM-DD"></el-input>
+          </el-form-item>
+          <el-form-item label="安装日期">
+            <el-input v-model="editForm.install_date" placeholder="YYYY-MM-DD"></el-input>
+          </el-form-item>
+          <el-form-item label="备注">
+            <el-input
+              type="textarea"
+              v-model="editForm.notes"
+              :rows="3"
+            ></el-input>
+          </el-form-item>
+          <el-form-item label="编辑密码">
+            <el-input
+              type="password"
+              v-model="editPassword"
+              placeholder="请输入编辑密码"
+            ></el-input>
+          </el-form-item>
+        </el-form>
 
-        <el-form-item label="位置">
-          <el-input v-model="editDevice.location" maxlength="60" clearable></el-input>
-        </el-form-item>
-
-        <el-form-item label="购买日期">
-          <el-date-picker
-            v-model="editDevice.purchase_date"
-            type="date"
-            placeholder="选择购买日期"
-            format="yyyy-MM-dd"
-            value-format="yyyyMMdd"
-            style="width: 100%;"
-          ></el-date-picker>
-        </el-form-item>
-
-        <el-form-item label="安装日期">
-          <el-date-picker
-            v-model="editDevice.install_date"
-            type="date"
-            placeholder="选择安装日期"
-            format="yyyy-MM-dd"
-            value-format="yyyyMMdd"
-            style="width: 100%;"
-          ></el-date-picker>
-        </el-form-item>
-
-        <el-form-item label="备注">
-          <el-input
-            type="textarea"
-            rows="3"
-            v-model="editDevice.remark"
-            maxlength="200"
-            placeholder="填写备注"
-            clearable
-          ></el-input>
-        </el-form-item>
-
-        <el-form-item label="编辑密码">
-          <el-input
-            v-model="editPassword"
-            type="password"
-            placeholder="请输入编辑密码"
-            show-password
-          ></el-input>
-        </el-form-item>
-
-        <div class="edit-btn-group">
-          <el-button type="primary" @click="saveEdit">保存</el-button>
-          <el-button @click="cancelEdit">取消</el-button>
+        <div style="margin-top: 20px;">
+          <el-button v-if="!editMode" type="primary" @click="startEdit">
+            编辑
+          </el-button>
+          <el-button v-else type="success" @click="saveEdit">
+            保存
+          </el-button>
+          <el-button v-if="editMode" @click="cancelEdit">取消</el-button>
         </div>
-      </el-form>
-    </template>
+      </div>
+    </el-card>
   </div>
-
-  <script src="https://unpkg.com/vue@2"></script>
-  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
   <script>
     const firebaseConfig = {
@@ -185,112 +161,23 @@
       appId: "1:648686550801:web:2f460487e32914042316b0",
       measurementId: "G-44L5PHN36Y",
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     new Vue({
       el: "#app",
-      data() {
-        return {
-          device: {},
-          editDevice: {},
-          editMode: false,
-          editPassword: "",
-          deviceId: null,
-        };
+      data: {
+        device: null,
+        loading: true,
+        editMode: false,
+        editForm: {
+          location: "",
+          purchase_date: "",
+          install_date: "",
+          notes: "",
+        },
+        editPassword: "",
       },
       created() {
-        this.deviceId = this.getQueryParam("id");
-        if (!this.deviceId) {
-          alert("未指定设备ID");
-          this.goBack();
-          return;
-        }
-        this.loadDevice();
-      },
-      methods: {
-        getQueryParam(name) {
-          const url = new URL(window.location.href);
-          return url.searchParams.get(name);
-        },
-        async loadDevice() {
-          try {
-            const snapshot = await db.ref(`devices/${this.deviceId}`).once("value");
-            const data = snapshot.val();
-            if (!data) {
-              alert("设备不存在或已被删除");
-              this.goBack();
-              return;
-            }
-            // 处理日期字段默认值
-            this.device = {
-              id: this.deviceId,
-              name: data.name || "",
-              location: data.location || "",
-              purchase_date: data.purchase_date || data.purchase || null,
-              install_date:
-                data.install_date || data.purchase_date || data.purchase || null,
-              remark: data.remark || "",
-            };
-            this.editDevice = JSON.parse(JSON.stringify(this.device));
-          } catch (e) {
-            alert("加载设备失败");
-            this.goBack();
-          }
-        },
-        formatDate(date) {
-          if (!date) return "未知";
-          if (typeof date === "string" && date.length === 8 && /^\d{8}$/.test(date)) {
-            return `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6)}`;
-          }
-          return date;
-        },
-        async saveEdit() {
-          if (this.editPassword !== "123456") {
-            this.$message.error("编辑密码错误");
-            return;
-          }
-          if (!this.editDevice.name.trim()) {
-            this.$message.warning("设备名称不能为空");
-            return;
-          }
-
-          // 处理安装日期默认与购买日期相同
-          if (
-            !this.editDevice.install_date &&
-            this.editDevice.purchase_date
-          ) {
-            this.editDevice.install_date = this.editDevice.purchase_date;
-          }
-
-          try {
-            await db.ref(`devices/${this.deviceId}`).update({
-              name: this.editDevice.name.trim(),
-              location: this.editDevice.location.trim(),
-              purchase_date: this.editDevice.purchase_date || null,
-              install_date: this.editDevice.install_date || this.editDevice.purchase_date || null,
-              remark: this.editDevice.remark.trim(),
-            });
-            this.device = JSON.parse(JSON.stringify(this.editDevice));
-            this.editMode = false;
-            this.editPassword = "";
-            this.$message.success("保存成功");
-          } catch (e) {
-            this.$message.error("保存失败");
-          }
-        },
-        cancelEdit() {
-          this.editDevice = JSON.parse(JSON.stringify(this.device));
-          this.editMode = false;
-          this.editPassword = "";
-        },
-        goBack() {
-          window.history.back();
-        },
-      },
-    });
-  </script>
-</body>
-
-</html>
+        const urlParams = new URLSearchParams(window.location.search);
+        const id = urlParams.get("id
