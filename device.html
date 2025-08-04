@@ -1,164 +1,49 @@
 <!DOCTYPE html>
-<html lang="zh">
-
+<html>
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>设备详情</title>
-  <script src="https://unpkg.com/vue@2"></script>
-  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css" />
   <style>
-    body {
-      padding: 20px;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-    }
+    body { font-family: sans-serif; margin: 2em; }
+    .edit-field { display: none; margin-top: 0.5em; }
+    .view-field span { font-weight: normal; }
+    .field-group { margin-bottom: 1em; }
   </style>
+
+  <!-- Firebase Compatibility (Compat) SDK 加载 -->
+  <!-- 注意：请将 9.22.0 替换为你从 Firebase 控制台 Project settings -> Your apps -> SDK setup and configuration 中找到的实际版本号 -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <!-- 如果你未来计划使用 Firebase 认证，还需要这个： -->
+  <!-- <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script> -->
+  <!-- 如果你不需要 Analytics，可以不加载这个SDK -->
+  <!-- <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script> -->
+
 </head>
-
 <body>
-  <div id="app" class="container">
-    <el-card v-loading="loading">
-      <h2 style="margin-bottom: 20px">设备详情</h2>
+  <h2 id="deviceName">设备名称</h2>
 
-      <div v-if="!device && !loading">
-        <el-alert title="未找到设备" type="error"></el-alert>
-      </div>
-
-      <div v-else-if="device">
-        <el-form :model="device" label-width="120px" label-position="left" v-if="!editMode">
-          <el-form-item label="设备名称">{{ device.name || 'N/A' }}</el-form-item>
-          <el-form-item label="位置">{{ device.location || 'N/A' }}</el-form-item>
-          <el-form-item label="上次维护">{{ device.last_maintenance || 'N/A' }}</el-form-item>
-          <el-form-item label="备注">{{ device.notes || '无' }}</el-form-item>
-        </el-form>
-
-        <el-form :model="editForm" label-width="120px" label-position="left" v-else>
-          <el-form-item label="位置">
-            <el-input v-model="editForm.location"></el-input>
-          </el-form-item>
-          <el-form-item label="备注">
-            <el-input type="textarea" v-model="editForm.notes" :rows="3"></el-input>
-          </el-form-item>
-        </el-form>
-
-        <div style="margin-top: 20px">
-          <el-button v-if="!editMode && isAuthenticated" type="primary" @click="enterEditMode">编辑</el-button>
-          <el-button v-else-if="editMode" type="success" @click="saveEdit">保存</el-button>
-          <el-button v-if="editMode" @click="cancelEdit">取消</el-button>
-          <el-alert v-if="!isAuthenticated && !loading" title="请登录以编辑设备信息" type="info" show-icon :closable="false" style="margin-top: 20px;"></el-alert>
-        </div>
-      </div>
-    </el-card>
+  <div class="field-group">
+    <div class="view-field">位置: <span id="deviceLocation"></span></div>
+    <input class="edit-field" id="editLocation" type="text" />
   </div>
 
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
-    import { getDatabase, ref, get, update } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
-    import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
+  <div class="field-group">
+    <div class="view-field">上次维护: <span id="deviceMaintenance"></span></div>
+  </div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
-      authDomain: "device-hub-5238.firebaseapp.com",
-      databaseURL: "https://device-hub-5238-default-rtdb.firebaseio.com",
-      projectId: "device-hub-5238",
-      storageBucket: "device-hub-5238.firebasestorage.app",
-      messagingSenderId: "648686550801",
-      appId: "1:648686550801:web:2f460487e32914042316b0",
-      measurementId: "G-44L5PHN36Y"
-    };
+  <div class="field-group">
+    <div class="view-field">备注: <span id="deviceNotes"></span></div>
+    <textarea class="edit-field" id="editNotes" rows="4" cols="40"></textarea>
+  </div>
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const auth = getAuth(app);
+  <div class="edit-field field-group">
+    密码：<input type="password" id="inputEditPassword" />
+  </div>
 
-    new Vue({
-      el: '#app',
-      data: {
-        loading: true,
-        device: null,
-        editMode: false,
-        editForm: {
-          location: '',
-          notes: ''
-        },
-        isAuthenticated: false,
-      },
-      created() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const id = urlParams.get('id');
+  <button id="btnEdit">编辑</button>
+  <button id="btnSaveDeviceInfo" class="edit-field">保存</button>
 
-        onAuthStateChanged(auth, user => {
-          if (user) {
-            this.isAuthenticated = true;
-            console.log('用户已登录:', user.uid);
-          } else {
-            this.isAuthenticated = false;
-            signInAnonymously(auth).catch(err => {
-              this.$message.error('匿名登录失败: ' + err.message);
-            });
-          }
-          if (id) {
-            this.fetchDeviceData(id);
-          } else {
-            this.loading = false;
-          }
-        });
-      },
-      methods: {
-        fetchDeviceData(id) {
-          this.loading = true;
-          get(ref(db, 'devices/' + id)).then(snapshot => {
-            if (snapshot.exists()) {
-              this.device = snapshot.val();
-              this.device.id = id;
-            } else {
-              this.device = null;
-              this.$message.warning('未找到指定设备！');
-            }
-            this.loading = false;
-          }).catch(error => {
-            this.device = null;
-            this.loading = false;
-            this.$message.error('加载设备数据失败: ' + error.message);
-            console.error(error);
-          });
-        },
-        enterEditMode() {
-          if (this.isAuthenticated) {
-            this.editMode = true;
-            this.editForm.location = this.device.location || '';
-            this.editForm.notes = this.device.notes || '';
-          } else {
-            this.$message.warning('您没有权限编辑设备，请先登录！');
-          }
-        },
-        saveEdit() {
-          if (!this.isAuthenticated) {
-            this.$message.error('您没有权限保存更改！');
-            return;
-          }
-          update(ref(db, 'devices/' + this.device.id), {
-            location: this.editForm.location,
-            notes: this.editForm.notes
-          }).then(() => {
-            this.device.location = this.editForm.location;
-            this.device.notes = this.editForm.notes;
-            this.$message.success('保存成功');
-            this.editMode = false;
-          }).catch(error => {
-            this.$message.error('保存失败: ' + error.message);
-            console.error(error);
-          });
-        },
-        cancelEdit() {
-          this.editMode = false;
-        }
-      }
-    });
-  </script>
+  <script src="device.js"></script>
 </body>
-
 </html>
