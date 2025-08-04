@@ -1,17 +1,57 @@
 <!-- device.html -->
-<h2>设备详情</h2>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>设备详情</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+  <style>
+    body { padding: 40px; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+    .el-card { max-width: 600px; margin: auto; }
+    .el-form-item__label { font-weight: bold; }
+    #edit-password { width: 100%; }
+    .actions { text-align: center; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <el-card v-if="device" shadow="hover">
+      <h2>{{ device.name || '未知设备' }}</h2>
 
-<label>名称</label>
-<input id="deviceName" disabled />
+      <el-form :model="device" label-width="100px" v-if="!editMode">
+        <el-form-item label="位置">{{ device.location || 'N/A' }}</el-form-item>
+        <el-form-item label="上次维护">{{ device.last_maintenance || 'N/A' }}</el-form-item>
+        <el-form-item label="备注">{{ device.notes || '无' }}</el-form-item>
+      </el-form>
 
-<label>位置</label>
-<input id="location" disabled />
+      <el-form v-else :model="editForm" label-width="100px">
+        <el-form-item label="位置">
+          <el-input v-model="editForm.location"></el-input>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input type="textarea" v-model="editForm.notes" :rows="3"></el-input>
+        </el-form-item>
+        <el-form-item label="编辑密码">
+          <el-input type="password" v-model="editPassword" id="edit-password"></el-input>
+        </el-form-item>
+      </el-form>
 
-<label>上次维护时间</label>
-<input id="lastMaintenance" disabled />
+      <div class="actions">
+        <el-button type="primary" icon="el-icon-edit" v-if="!editMode" @click="startEdit">编辑</el-button>
+        <el-button type="success" icon="el-icon-check" v-if="editMode" @click="saveEdit">保存</el-button>
+        <el-button v-if="editMode" @click="cancelEdit">取消</el-button>
+      </div>
+    </el-card>
+  </div>
 
-<label>备注</label>
-<textarea id="notes" disabled></textarea>
+  <!-- Element UI 和 Vue -->
+  <script src="https://unpkg.com/vue@2.6.14/dist/vue.min.js"></script>
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
 
-<button id="editBtn">编辑</button>
-<button id="saveBtn" style="display: none;">保存</button>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+  <script src="device.js"></script>
+</body>
+</html>
