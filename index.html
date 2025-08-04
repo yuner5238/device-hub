@@ -2,26 +2,26 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>设备管理系统</title>
-  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>设备管理系统 - 首页</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css" />
   <style>
     body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Segoe UI", Roboto, "Hiragino Sans GB", sans-serif;
-      background-color: #f8f8f8;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
+      background-color: #f5f5f7;
+      margin: 0; padding: 0;
     }
     .container {
-      max-width: 800px;
-      margin: auto;
+      max-width: 900px;
+      margin: 0 auto;
       padding: 20px;
     }
-    .announcements {
-      background-color: #fff;
+    .announcement {
+      background: white;
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      padding: 20px;
-      margin-bottom: 30px;
+      padding: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.05);
     }
     .announcement-header {
       display: flex;
@@ -29,82 +29,77 @@
       align-items: center;
       margin-bottom: 12px;
     }
+    .announcement h2 {
+      font-size: 20px;
+      margin: 0;
+      font-weight: 600;
+    }
     .device-card {
-      background-color: #fff;
-      border-radius: 12px;
+      background: white;
+      border-radius: 10px;
       padding: 16px;
       margin-bottom: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      transition: box-shadow 0.2s ease;
       cursor: pointer;
-      transition: transform 0.2s;
     }
     .device-card:hover {
-      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
-    .device-title {
+    .device-name {
+      font-size: 18px;
       font-weight: 500;
-      font-size: 16px;
-      color: #111;
     }
-    .device-sub {
+    .device-meta {
       color: #888;
       font-size: 14px;
-      margin-top: 4px;
+      margin-top: 6px;
     }
-    .edit-area {
-      margin-top: 10px;
+    .edit-button {
+      font-size: 14px;
+      cursor: pointer;
+      color: #409EFF;
+      user-select: none;
     }
-    .el-input, .el-button {
-      margin-top: 5px;
+    @media (max-width: 600px) {
+      .device-card {
+        padding: 12px;
+      }
+      .device-name {
+        font-size: 16px;
+      }
     }
   </style>
 </head>
 <body>
   <div id="app" class="container">
-    <!-- 公告栏 -->
-    <div class="announcements">
+    <div class="announcement">
       <div class="announcement-header">
-        <h3>📢 公告栏</h3>
-        <el-button type="text" @click="editing = !editing">{{ editing ? '取消' : '编辑' }}</el-button>
+        <h2>📢 公告栏</h2>
+        <span class="edit-button" @click="editAnnouncement">编辑</span>
       </div>
-      <div v-if="!editing">
-        <div v-for="(item, key) in announcementList" :key="key" style="margin-bottom: 12px;">
-          <strong>{{ item.title }}</strong>（{{ item.date }}）<br />
-          <span style="color: #555;">{{ item.content }}</span>
-        </div>
-      </div>
-      <div v-else class="edit-area">
-        <el-input v-model="editPassword" placeholder="请输入编辑密码" show-password></el-input>
-        <div v-for="(item, key, index) in announcementList" :key="key" style="margin-top: 10px;">
-          <el-input v-model="item.title" placeholder="标题"></el-input>
-          <el-input v-model="item.content" placeholder="内容"></el-input>
-          <el-date-picker v-model="item.date" type="date" placeholder="日期" style="width: 100%;"></el-date-picker>
-        </div>
-        <el-button type="primary" @click="saveAnnouncements">保存</el-button>
+      <div v-for="(item, key) in announcements" :key="key" style="margin-bottom: 8px;">
+        <strong>{{ item.title }}</strong><br />
+        <span>{{ item.content }}</span><br />
+        <small style="color: #999;">{{ item.date }}</small>
       </div>
     </div>
 
-    <!-- 设备列表 -->
-    <div v-for="(device, key) in visibleDevices" :key="key" class="device-card" @click="goToDevice(key)">
-      <div class="device-title">{{ device.name }}</div>
-      <div class="device-sub">{{ device.location }}</div>
+    <div v-for="device in displayedDevices" :key="device.key" class="device-card" @click="goToDevice(device.key)">
+      <div class="device-name">{{ device.name }}</div>
+      <div class="device-meta">{{ device.location }} · 采购日期: {{ device.purchase_date }}</div>
     </div>
 
-    <!-- 加载提示 -->
-    <el-empty v-if="!loading && visibleDevices.length === 0" description="暂无设备"></el-empty>
-    <div v-if="loading" style="text-align: center; margin-top: 20px;">
-      <el-spinner type="snake"></el-spinner>
-    </div>
+    <el-button v-if="hasMore" @click="loadMore" type="primary" size="small" style="margin: 16px auto; display: block;">
+      加载更多设备
+    </el-button>
   </div>
 
-  <!-- Firebase + Vue + Element UI -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
   <script src="https://unpkg.com/element-ui/lib/index.js"></script>
-
   <script>
-    // ✅ 用你的 Firebase 项目配置替换这里：
+    // Firebase 配置，默认帮你带上
     const firebaseConfig = {
       apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
       authDomain: "device-hub-5238.firebaseapp.com",
@@ -122,63 +117,125 @@
     new Vue({
       el: '#app',
       data: {
-        devices: {},
-        visibleDevices: [],
-        batchSize: 10,
-        loadedCount: 0,
-        loading: false,
-        announcementList: {},
-        editing: false,
-        editPassword: ''
+        announcements: {},
+        devices: [],
+        displayedDevices: [],
+        devicesPerPage: 10,
+        currentPage: 0,
+        hasMore: true,
+        // 密码提示相关
+        announcementEditPassword: '123456',
       },
       created() {
         this.fetchAnnouncements();
         this.fetchDevices();
-        window.addEventListener('scroll', this.handleScroll);
       },
       methods: {
         fetchAnnouncements() {
-          db.ref("announcements").once("value").then(snapshot => {
-            this.announcementList = snapshot.val() || {};
-          });
-        },
-        saveAnnouncements() {
-          if (this.editPassword !== '123456') {
-            this.$message.error("密码错误");
-            return;
-          }
-          db.ref("announcements").set(this.announcementList).then(() => {
-            this.editing = false;
-            this.$message.success("已保存公告");
+          db.ref('announcements').orderByKey().limitToLast(3).once('value').then(snapshot => {
+            let data = snapshot.val() || {};
+            // 按日期倒序排序
+            let arr = Object.entries(data).map(([key, val]) => val);
+            arr.sort((a,b) => new Date(b.date) - new Date(a.date));
+            // 只保留最新3条
+            this.announcements = arr.slice(0,3);
           });
         },
         fetchDevices() {
-          db.ref("devices").once("value").then(snapshot => {
-            this.devices = snapshot.val() || {};
+          db.ref().once('value').then(snapshot => {
+            const data = snapshot.val() || {};
+            // 过滤出设备节点，排除 announcements
+            const devices = [];
+            for (const key in data) {
+              if (key === 'announcements') continue;
+              const dev = data[key];
+              if (dev && dev.name && dev.location && dev.purchase_date) {
+                devices.push({...dev, key});
+              }
+            }
+            // 按设备 key 排序（字母数字升序）
+            devices.sort((a,b) => a.key.localeCompare(b.key));
+            this.devices = devices;
             this.loadMore();
           });
         },
         loadMore() {
-          if (this.loading) return;
-          this.loading = true;
-          const keys = Object.keys(this.devices);
-          const nextBatch = keys.slice(this.loadedCount, this.loadedCount + this.batchSize);
-          nextBatch.forEach(key => {
-            this.visibleDevices.push({ ...this.devices[key], key });
-          });
-          this.loadedCount += this.batchSize;
-          this.loading = false;
-        },
-        handleScroll() {
-          const scrollY = window.scrollY;
-          const visibleHeight = document.documentElement.clientHeight;
-          const pageHeight = document.documentElement.scrollHeight;
-          if (scrollY + visibleHeight >= pageHeight - 100) {
-            this.loadMore();
+          const start = this.currentPage * this.devicesPerPage;
+          const end = start + this.devicesPerPage;
+          const nextBatch = this.devices.slice(start, end);
+          if (nextBatch.length === 0) {
+            this.hasMore = false;
+            return;
           }
+          this.displayedDevices = this.displayedDevices.concat(nextBatch);
+          this.currentPage++;
+          this.hasMore = this.devices.length > this.displayedDevices.length;
         },
         goToDevice(key) {
+          // 直接跳转，key已全部是英文
           window.location.href = `device.html?id=${encodeURIComponent(key)}`;
+        },
+        editAnnouncement() {
+          this.$prompt('请输入编辑密码', '密码验证', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            inputType: 'password',
+            inputPlaceholder: '请输入密码'
+          }).then(({ value }) => {
+            if (value === this.announcementEditPassword) {
+              this.openAnnouncementEditor();
+            } else {
+              this.$message.error('密码错误');
+            }
+          }).catch(() => {});
+        },
+        openAnnouncementEditor() {
+          // 简易编辑公告：这里只允许编辑前三条公告的内容和标题
+          // 弹窗输入，逐条编辑（也可以按需改进成更复杂UI）
+          let promises = [];
+          for(let i=0; i< this.announcements.length; i++){
+            let ann = this.announcements[i];
+            promises.push(this.$prompt(`编辑公告标题（第${i+1}条）`, '编辑公告', {
+              confirmButtonText: '确定',
+              cancelButtonText: '跳过',
+              inputValue: ann.title,
+              inputPlaceholder: '标题'
+            }).then(({value})=>{
+              ann.title = value;
+              return this.$prompt(`编辑公告内容（第${i+1}条）`, '编辑公告', {
+                confirmButtonText: '确定',
+                cancelButtonText: '跳过',
+                inputValue: ann.content,
+                inputPlaceholder: '内容'
+              }).then(({value})=>{
+                ann.content = value;
+                return ann;
+              });
+            }).catch(()=>{
+              // 跳过编辑此条公告
+              return ann;
+            }));
+          }
+          Promise.all(promises).then(results => {
+            // 更新到数据库
+            // 先读取所有公告 key 排序，匹配前3条更新
+            db.ref('announcements').once('value').then(snapshot=>{
+              const allAnnouncements = snapshot.val() || {};
+              const keys = Object.keys(allAnnouncements).sort();
+              let updates = {};
+              for(let i=0; i<results.length; i++){
+                if(i >= keys.length) break;
+                updates[`announcements/${keys[i]}/title`] = results[i].title;
+                updates[`announcements/${keys[i]}/content`] = results[i].content;
+              }
+              db.ref().update(updates).then(()=>{
+                this.$message.success('公告已更新');
+                this.fetchAnnouncements();
+              }).catch(()=>{
+                this.$message.error('更新失败');
+              });
+            });
+          });
         }
       }
     });
