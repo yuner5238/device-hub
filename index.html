@@ -2,202 +2,181 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>DeviceHub - 首页</title>
-  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css" />
+  <title>设备管理系统 - 首页</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+  <script src="https://unpkg.com/vue@3"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <!-- Firebase 兼容版 -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
-    body {
-      padding: 20px;
-      background: #f9f9f9;
-    }
-    #app {
-      max-width: 900px;
-      margin: auto;
-    }
-    .announcements {
-      margin-bottom: 20px;
-    }
-    .announcement {
-      padding: 10px;
-      background: #e1f3f8;
-      border-left: 5px solid #409EFF;
-      margin-bottom: 8px;
-      border-radius: 3px;
-      font-size: 14px;
-      color: #333;
-    }
-    .password-overlay {
-      position: fixed;
-      top:0; left:0; right:0; bottom:0;
-      background: rgba(0,0,0,0.4);
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      z-index: 9999;
-    }
-    .password-box {
-      background: white;
-      padding: 30px 40px;
-      border-radius: 8px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.3);
-      width: 320px;
-      text-align:center;
-    }
+    #app { max-width: 900px; margin: 20px auto; }
+    .announcement { font-size: 14px; color: #666; margin-bottom: 15px; }
+    .announcement-item { margin-bottom: 5px; }
+    .device-list { margin-top: 10px; }
   </style>
 </head>
 <body>
-  <div id="app">
-    <el-page-header content="DeviceHub 首页" style="margin-bottom:20px;"></el-page-header>
-
-    <div class="announcements" v-if="announcements.length > 0">
-      <el-card class="box-card" shadow="hover">
-        <div slot="header" class="clearfix">
-          <span>公告</span>
-        </div>
-        <div v-for="(item, index) in announcements" :key="index" class="announcement">{{ item.text }}</div>
-      </el-card>
-    </div>
-
-    <el-card class="box-card" shadow="hover" style="margin-bottom: 30px;">
-      <div slot="header" class="clearfix">
-        <span>设备列表</span>
-      </div>
-      <el-list>
-        <el-list-item v-for="device in deviceList" :key="device.id" @click="openDevice(device.id)" style="cursor:pointer;">
-          <el-row>
-            <el-col :span="12">{{ device.name || "未命名设备" }}</el-col>
-            <el-col :span="12" style="text-align:right; color:#888;">位置：{{ device.location || "未知" }}</el-col>
-          </el-row>
-        </el-list-item>
-      </el-list>
-      <div style="text-align:center; margin-top: 10px;" v-if="loadingDevices">
-        <el-spinner type="circle"></el-spinner>
-      </div>
-      <div v-if="!loadingDevices && noMoreDevices" style="text-align:center; color:#999; margin-top:10px;">没有更多设备了</div>
-    </el-card>
-  </div>
-
-  <div v-if="!accessGranted" class="password-overlay">
-    <div class="password-box">
-      <h3>请输入访问密码</h3>
+<div id="app">
+  <el-card shadow="hover" style="padding: 20px;">
+    <div v-if="!authenticated" style="text-align:center;">
       <el-input
+        v-model="passwordInput"
+        type="password"
         placeholder="请输入密码"
-        v-model="inputPassword"
-        show-password
-        @keyup.enter.native="checkPassword"
+        style="max-width: 300px; margin-bottom: 15px;"
+        @keyup.enter="checkPassword"
       />
-      <el-button type="primary" style="margin-top: 15px;" @click="checkPassword">确认</el-button>
-      <div style="color: red; margin-top: 10px;" v-if="passwordError">{{ passwordError }}</div>
+      <el-button type="primary" @click="checkPassword">登录</el-button>
+      <el-alert v-if="errorMsg" type="error" :title="errorMsg" style="margin-top: 10px;"></el-alert>
     </div>
-  </div>
 
-  <!-- Vue & Element UI & Firebase -->
-  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
-  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <div v-else>
+      <el-divider>公告</el-divider>
+      <div class="announcement" v-if="announcements.length === 0">暂无公告</div>
+      <div v-for="(item, index) in announcements" :key="index" class="announcement-item">
+        • {{ item }}
+      </div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+      <el-divider>设备列表</el-divider>
+      <el-list class="device-list" style="max-height: 500px; overflow-y: auto;" @scroll.passive="handleScroll" ref="deviceList">
+        <el-list-item
+          v-for="device in devices"
+          :key="device.id"
+          @click="openDevice(device.id)"
+          style="cursor: pointer;"
+        >
+          <el-list-item-content>
+            <el-list-item-title>{{ device.name || '无名设备' }}</el-list-item-title>
+            <el-list-item-description>位置: {{ device.location || '未知' }}</el-list-item-description>
+          </el-list-item-content>
+          <el-list-item-action>
+            <el-button type="text" size="small">查看详情</el-button>
+          </el-list-item-action>
+        </el-list-item>
+        <div v-if="loading" style="text-align:center; padding:10px;">加载中...</div>
+        <div v-if="noMoreData" style="text-align:center; padding:10px; color:#888;">没有更多设备了</div>
+      </el-list>
+    </div>
+  </el-card>
+</div>
 
-  <script>
-    // Firebase 配置
-    const firebaseConfig = {
-      apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
-      authDomain: "device-hub-5238.firebaseapp.com",
-      databaseURL: "https://device-hub-5238-default-rtdb.firebaseio.com",
-      projectId: "device-hub-5238",
-      storageBucket: "device-hub-5238.firebasestorage.app",
-      messagingSenderId: "648686550801",
-      appId: "1:648686550801:web:2f460487e32914042316b0",
-      measurementId: "G-44L5PHN36Y"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
+<script>
+  // Firebase 配置，替换成你自己的
+  const firebaseConfig = {
+    apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
+    authDomain: "device-hub-5238.firebaseapp.com",
+    databaseURL: "https://device-hub-5238-default-rtdb.firebaseio.com",
+    projectId: "device-hub-5238",
+    storageBucket: "device-hub-5238.firebasestorage.app",
+    messagingSenderId: "648686550801",
+    appId: "1:648686550801:web:2f460487e32914042316b0",
+    measurementId: "G-44L5PHN36Y"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
 
-    new Vue({
-      el: '#app',
-      data: {
-        accessGranted: false,
-        inputPassword: '',
-        passwordError: '',
-        announcements: [],
-        deviceList: [],
-        loadingDevices: false,
-        noMoreDevices: false,
-        pageSize: 10,
-        lastKey: null,
-      },
-      methods: {
-        checkPassword() {
-          if(this.inputPassword === 'iamadmin') {
-            this.accessGranted = true;
-            this.passwordError = '';
-            this.loadAnnouncements();
-            this.loadDevices();
-            this.setupScrollListener();
-          } else {
-            this.passwordError = '密码错误，请重试';
-          }
-        },
-        async loadAnnouncements() {
-          try {
-            const snapshot = await database.ref('announcements').limitToFirst(3).once('value');
-            const data = snapshot.val() || {};
-            // 转成数组并截取前三条
-            this.announcements = Object.values(data).slice(0, 3);
-          } catch(e) {
-            console.error('公告加载失败', e);
-          }
-        },
-        async loadDevices() {
-          if(this.loadingDevices || this.noMoreDevices) return;
-          this.loadingDevices = true;
+  const { createApp, ref, onMounted } = Vue;
+  const { ElMessage } = ElementPlus;
 
-          let query = database.ref('devices').orderByKey().limitToFirst(this.pageSize + 1);
-          if(this.lastKey) {
-            query = database.ref('devices').orderByKey().startAfter(this.lastKey).limitToFirst(this.pageSize + 1);
-          }
+  createApp({
+    setup() {
+      const passwordInput = ref('');
+      const authenticated = ref(false);
+      const errorMsg = ref('');
+      const announcements = ref([]);
+      const devices = ref([]);
+      const pageSize = 10;
+      let lastKey = null; // 用于分页的最后一个设备ID
+      const loading = ref(false);
+      const noMoreData = ref(false);
+      const deviceList = ref(null);
 
-          try {
-            const snapshot = await query.once('value');
-            const data = snapshot.val();
-            if(!data) {
-              this.noMoreDevices = true;
-              this.loadingDevices = false;
-              return;
-            }
-
-            let keys = Object.keys(data);
-            if(keys.length <= this.pageSize) {
-              this.noMoreDevices = true;
-            } else {
-              // 多取一条用于判断是否还有下一页，删除最后一条
-              keys.pop();
-            }
-
-            keys.forEach(k => {
-              this.deviceList.push({ id: k, ...data[k] });
-            });
-
-            this.lastKey = keys[keys.length - 1];
-
-          } catch(e) {
-            console.error('设备列表加载失败', e);
-          } finally {
-            this.loadingDevices = false;
-          }
-        },
-        openDevice(id) {
-          window.location.href = `device.html?id=${id}`;
-        },
-        setupScrollListener() {
-          window.addEventListener('scroll', () => {
-            if(this.loadingDevices || this.noMoreDevices) return;
-            if(window.innerHeight + window.scrollY >= document.body.offsetHeight - 50) {
-              this.loadDevices();
-            }
-          });
+      function checkPassword() {
+        if (passwordInput.value === 'iamadmin') {
+          authenticated.value = true;
+          errorMsg.value = '';
+          loadAnnouncements();
+          loadDevices();
+        } else {
+          errorMsg.value = '密码错误';
         }
       }
-    });
-  </script>
+
+      // 加载最多3条公告（假设存在数据库 announcements 节点，或者这里写死）
+      function loadAnnouncements() {
+        // 这里演示写死公告，你可以改成从 Firebase 读取
+        announcements.value = [
+          "系统维护时间：每周六晚上10点",
+          "新设备已入库，请及时检查",
+          "请确保设备位置更新准确"
+        ];
+      }
+
+      // 从 Firebase 读取设备，按 id 排序分页加载
+      async function loadDevices() {
+        if (loading.value || noMoreData.value) return;
+        loading.value = true;
+        try {
+          let query = database.ref('devices').orderByKey().limitToFirst(pageSize + 1);
+          if (lastKey) {
+            query = database.ref('devices').orderByKey().startAfter(lastKey).limitToFirst(pageSize + 1);
+          }
+          const snapshot = await query.once('value');
+          const vals = snapshot.val();
+          if (!vals) {
+            noMoreData.value = true;
+            loading.value = false;
+            return;
+          }
+          const entries = Object.entries(vals);
+          // 如果多取了一条，说明后面还有数据，否则没了
+          if (entries.length <= pageSize) {
+            noMoreData.value = true;
+          }
+          // 实际加载数量不含最后多取一条
+          const toLoad = entries.slice(0, pageSize);
+          toLoad.forEach(([key, val]) => {
+            devices.value.push({ id: key, ...val });
+          });
+          if (entries.length > 0) {
+            lastKey = entries[entries.length - 1][0];
+          }
+        } catch (e) {
+          ElMessage.error("加载设备失败：" + e.message);
+        }
+        loading.value = false;
+      }
+
+      // 滚动事件触发懒加载
+      function handleScroll() {
+        if (!deviceList.value) return;
+        const el = deviceList.value.$el || deviceList.value;
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
+          loadDevices();
+        }
+      }
+
+      // 点击设备跳转详情
+      function openDevice(id) {
+        window.location.href = `device.html?id=${id}`;
+      }
+
+      return {
+        passwordInput,
+        authenticated,
+        errorMsg,
+        announcements,
+        devices,
+        loading,
+        noMoreData,
+        checkPassword,
+        handleScroll,
+        openDevice,
+        deviceList
+      };
+    }
+  }).use(ElementPlus).mount('#app');
+</script>
 </body>
 </html>
