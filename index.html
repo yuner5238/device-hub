@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>DeviceHub - 首页</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css" />
+  <style>
+    body {
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    #app {
+      max-width: 900px;
+      margin: auto;
+    }
+    .announcements {
+      margin-bottom: 20px;
+    }
+    .announcement {
+      padding: 10px;
+      background: #e1f3f8;
+      border-left: 5px solid #409EFF;
+      margin-bottom: 8px;
+      border-radius: 3px;
+      font-size: 14px;
+      color: #333;
+    }
+    .password-overlay {
+      position: fixed;
+      top:0; left:0; right:0; bottom:0;
+      background: rgba(0,0,0,0.4);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      z-index: 9999;
+    }
+    .password-box {
+      background: white;
+      padding: 30px 40px;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      width: 320px;
+      text-align:center;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <el-page-header content="DeviceHub 首页" style="margin-bottom:20px;"></el-page-header>
+
+    <div class="announcements" v-if="announcements.length > 0">
+      <el-card class="box-card" shadow="hover">
+        <div slot="header" class="clearfix">
+          <span>公告</span>
+        </div>
+        <div v-for="(item, index) in announcements" :key="index" class="announcement">{{ item.text }}</div>
+      </el-card>
+    </div>
+
+    <el-card class="box-card" shadow="hover" style="margin-bottom: 30px;">
+      <div slot="header" class="clearfix">
+        <span>设备列表</span>
+      </div>
+      <el-list>
+        <el-list-item v-for="device in deviceList" :key="device.id" @click="openDevice(device.id)" style="cursor:pointer;">
+          <el-row>
+            <el-col :span="12">{{ device.name || "未命名设备" }}</el-col>
+            <el-col :span="12" style="text-align:right; color:#888;">位置：{{ device.location || "未知" }}</el-col>
+          </el-row>
+        </el-list-item>
+      </el-list>
+      <div style="text-align:center; margin-top: 10px;" v-if="loadingDevices">
+        <el-spinner type="circle"></el-spinner>
+      </div>
+      <div v-if="!loadingDevices && noMoreDevices" style="text-align:center; color:#999; margin-top:10px;">没有更多设备了</div>
+    </el-card>
+  </div>
+
+  <div v-if="!accessGranted" class="password-overlay">
+    <div class="password-box">
+      <h3>请输入访问密码</h3>
+      <el-input
+        placeholder="请输入密码"
+        v-model="inputPassword"
+        show-password
+        @keyup.enter.native="checkPassword"
+      />
+      <el-button type="primary" style="margin-top: 15px;" @click="checkPassword">确认</el-button>
+      <div style="color: red; margin-top: 10px;" v-if="passwordError">{{ passwordError }}</div>
+    </div>
+  </div>
+
+  <!-- Vue & Element UI & Firebase -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <script>
+    // Firebase 配置
+    const firebaseConfig = {
+      apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
+      authDomain: "device-hub-5238.firebaseapp.com",
+      databaseURL: "https://device-hub-5238-default-rtdb.firebaseio.com",
+      projectId: "device-hub-5238",
+      storageBucket: "device-hub-5238.firebasestorage.app",
+      messagingSenderId: "648686550801",
+      appId: "1:648686550801:web:2f460487e32914042316b0",
+      measurementId: "G-44L5PHN36Y"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    new Vue({
+      el: '#app',
+      data: {
+        accessGranted: false,
+        inputPassword: '',
+        passwordError: '',
+        announcements: [],
+        deviceList: [],
+        loadingDevices: false,
+        noMoreDevices: false,
+        pageSize: 10,
+        lastKey: null,
+      },
+      methods: {
+        checkPassword() {
+          if(this.inputPassword === 'iamadmin') {
+            this.accessGranted = true;
+            this.passwordError = '';
+            this.loadAnnouncements();
+            this.loadDevices();
+            this.setupScrollListener();
+          } else {
+            this.passwordError = '密码错误，请重试';
+          }
+        },
+        async loadAnnouncements() {
+          try {
+            const snapshot = await database.ref('announcements').limitToFirst(3).once('value');
+            const data = snapshot.val() || {};
+            // 转成数组并截取前三条
+            this.announcements = Object.values(data).slice(0, 3);
+          } catch(e) {
+            console.error('公告加载失败', e);
+          }
+        },
+        async loadDevices() {
+          if(this.loadingDevices || this.noMoreDevices) return;
+          this.loadingDevices = true;
+
+          let query = database.ref('devices').orderByKey().limitToFirst(this.pageSize + 1);
+          if(this.lastKey) {
+            query = database.ref('devices').orderByKey().startAfter(this.lastKey).limitToFirst(this.pageSize + 1);
+          }
+
+          try {
+            const snapshot = await query.once('value');
+            const data = snapshot.val();
+            if(!data) {
+              this.noMoreDevices = true;
+              this.loadingDevices = false;
+              return;
+            }
+
+            let keys = Object.keys(data);
+            if(keys.length <= this.pageSize) {
+              this.noMoreDevices = true;
+            } else {
+              // 多取一条用于判断是否还有下一页，删除最后一条
+              keys.pop();
+            }
+
+            keys.forEach(k => {
+              this.deviceList.push({ id: k, ...data[k] });
+            });
+
+            this.lastKey = keys[keys.length - 1];
+
+          } catch(e) {
+            console.error('设备列表加载失败', e);
+          } finally {
+            this.loadingDevices = false;
+          }
+        },
+        openDevice(id) {
+          window.location.href = `device.html?id=${id}`;
+        },
+        setupScrollListener() {
+          window.addEventListener('scroll', () => {
+            if(this.loadingDevices || this.noMoreDevices) return;
+            if(window.innerHeight + window.scrollY >= document.body.offsetHeight - 50) {
+              this.loadDevices();
+            }
+          });
+        }
+      }
+    });
+  </script>
+</body>
+</html>
