@@ -4,11 +4,23 @@
 <head>
   <meta charset="UTF-8" />
   <title>设备详情</title>
+  <!-- Element UI 和 Vue.js 保持不变 -->
   <script src="https://unpkg.com/vue@2"></script>
   <script src="https://unpkg.com/element-ui/lib/index.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css" />
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+  <!-- 💡 改进: 导入 Firebase 模块化 SDK -->
+  <!-- 只需要导入你需要的部分，这里是 app 和 database -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
+    import { getDatabase, ref, once, update } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
+    import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js'; // 导入 Authentication
+    
+    // 将 Firebase 模块导出到全局范围，以便 Vue 实例可以访问
+    // 注意：在实际项目中，更好的做法是将 Firebase 初始化和操作封装成服务或插件
+    window.FirebaseApp = { initializeApp, getDatabase, ref, once, update, getAuth, signInAnonymously, onAuthStateChanged };
+  </script>
+
   <style>
     body {
       padding: 20px;
@@ -45,33 +57,42 @@
           <el-form-item label="备注">
             <el-input type="textarea" v-model="editForm.notes" :rows="3"></el-input>
           </el-form-item>
-          <el-form-item label="编辑密码">
+          <!-- 💡 移除硬编码密码输入框，因为我们将使用 Firebase Authentication -->
+          <!-- <el-form-item label="编辑密码">
             <el-input type="password" v-model="editPassword"></el-input>
-          </el-form-item>
+          </el-form-item> -->
         </el-form>
 
         <div style="margin-top: 20px">
-          <el-button v-if="!editMode" type="primary" @click="editMode = true">编辑</el-button>
-          <el-button v-else type="success" @click="saveEdit">保存</el-button>
+          <!-- 💡 仅当用户已认证时才显示“编辑”按钮 -->
+          <el-button v-if="!editMode && isAuthenticated" type="primary" @click="enterEditMode">编辑</el-button>
+          <el-button v-else-if="editMode" type="success" @click="saveEdit">保存</el-button>
           <el-button v-if="editMode" @click="cancelEdit">取消</el-button>
+          <el-alert v-if="!isAuthenticated && !loading" title="请登录以编辑设备信息" type="info" show-icon :closable="false" style="margin-top: 20px;"></el-alert>
         </div>
       </div>
     </el-card>
   </div>
 
-  <script>
+  <script type="module">
+    // 💡 从全局对象中获取 Firebase 模块
+    const { initializeApp, getDatabase, ref, once, update, getAuth, signInAnonymously, onAuthStateChanged } = window.FirebaseApp;
+
+    // 💡 替换为你的 Firebase 项目配置
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyBnRKitQGBX0u8k4COtDTILYxCJuMf7xzE", // 这是一个示例API Key，请使用你自己的
+      authDomain: "device-hub-5238.firebaseapp.com",
+      databaseURL: "https://device-hub-5238-default-rtdb.firebaseio.com",
+      projectId: "device-hub-5238",
+      storageBucket: "device-hub-5238.appspot.com", // 通常是 projectId.appspot.com
+      messagingSenderId: "648686550801", // 这是你的项目编号
+      appId: "1:648686550801:web:xxxxxxxxxxxxxxxxxxxx" // 💡 你的 Web 应用 ID，请从 Firebase 控制台获取
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    // 初始化 Firebase 应用
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app); // 获取 Realtime Database 服务
+    const auth = getAuth(app);   // 获取 Authentication 服务
 
     new Vue({
       el: '#app',
@@ -83,38 +104,85 @@
           location: '',
           notes: ''
         },
-        editPassword: ''
+        // 💡 移除 editPassword
+        // editPassword: '',
+        isAuthenticated: false, // 💡 新增：用户是否认证状态
       },
       created() {
         const urlParams = new URLSearchParams(window.location.search);
         const id = urlParams.get('id');
-        if (id) {
-          this.fetchDeviceData(id);
-        } else {
-          this.loading = false;
-        }
+
+        // 💡 监听认证状态变化
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            // 用户已登录 (匿名或通过其他方式)
+            this.isAuthenticated = true;
+            console.log('用户已登录:', user.uid);
+          } else {
+            // 用户未登录，尝试匿名登录
+            this.isAuthenticated = false;
+            signInAnonymously(auth)
+              .then(() => {
+                console.log('匿名登录成功');
+              })
+              .catch((error) => {
+                const errorCode = error.code;
+                const errorMessage = error.message;
+                console.error('匿名登录失败:', errorCode, errorMessage);
+                this.$message.error('登录失败: ' + errorMessage);
+              });
+          }
+          // 在认证状态确定后，再加载设备数据
+          if (id) {
+            this.fetchDeviceData(id);
+          } else {
+            this.loading = false;
+          }
+        });
       },
       methods: {
         fetchDeviceData(id) {
-          db.ref('devices/' + id).once('value').then(snapshot => {
+          this.loading = true; // 确保在重新加载时显示加载状态
+          // 💡 使用模块化 SDK 的 ref 和 once 函数
+          once(ref(db, 'devices/' + id)).then(snapshot => {
             if (snapshot.exists()) {
               this.device = snapshot.val();
               this.device.id = id;
             } else {
               this.device = null; // 设备不存在时，置空device
+              this.$message.warning('未找到指定设备！'); // 💡 友好提示
             }
             this.loading = false;
-          }).catch(() => {
+          }).catch(error => {
             this.device = null;
             this.loading = false;
+            this.$message.error('加载设备数据失败: ' + error.message); // 💡 错误提示
+            console.error("Error fetching device data:", error);
           });
         },
+        // 💡 新增进入编辑模式的方法
+        enterEditMode() {
+          if (this.isAuthenticated) {
+            this.editMode = true;
+          } else {
+            this.$message.warning('您没有权限编辑设备，请先登录！');
+          }
+        },
         saveEdit() {
-          if (this.editPassword !== 'bianji') {
-            this.$message.error('编辑密码错误');
+          // 💡 确保只有认证用户才能保存
+          if (!this.isAuthenticated) {
+            this.$message.error('您没有权限保存更改！');
             return;
           }
-          db.ref('devices/' + this.device.id).update({
+
+          // 💡 移除硬编码密码检查
+          // if (this.editPassword !== 'bianji') {
+          //   this.$message.error('编辑密码错误');
+          //   return;
+          // }
+
+          // 💡 使用模块化 SDK 的 ref 和 update 函数
+          update(ref(db, 'devices/' + this.device.id), {
             location: this.editForm.location,
             notes: this.editForm.notes
           }).then(() => {
@@ -122,13 +190,16 @@
             this.device.notes = this.editForm.notes;
             this.$message.success('保存成功');
             this.editMode = false;
-          }).catch(() => {
-            this.$message.error('保存失败，请稍后重试');
+          }).catch(error => {
+            this.$message.error('保存失败，请稍后重试: ' + error.message); // 💡 错误提示
+            console.error("Error saving device data:", error);
           });
         },
         cancelEdit() {
-          this.editForm.location = this.device.location;
-          this.editForm.notes = this.device.notes;
+          if (this.device) { // 确保 device 存在时才赋值
+            this.editForm.location = this.device.location;
+            this.editForm.notes = this.device.notes;
+          }
           this.editMode = false;
         }
       },
@@ -137,7 +208,8 @@
           if (newVal && this.device) {
             this.editForm.location = this.device.location;
             this.editForm.notes = this.device.notes;
-            this.editPassword = '';
+            // 💡 移除 editPassword 清空
+            // this.editPassword = '';
           }
         }
       }
