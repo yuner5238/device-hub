@@ -91,16 +91,16 @@
         <div class="value">{{ device.location || '-' }}</div>
       </div>
       <div>
-        <div class="label">备注</div>
-        <div class="value">{{ device.note || '-' }}</div>
-      </div>
-      <div>
         <div class="label">采购日期</div>
         <div class="value">{{ device.purchase_date || '-' }}</div>
       </div>
       <div>
         <div class="label">安装日期</div>
         <div class="value">{{ device.install_date || device.purchase_date || '-' }}</div>
+      </div>      
+      <div>
+        <div class="label">备注</div>
+        <div class="value">{{ device.note || '-' }}</div>
       </div>
       <div class="btn-edit" @click="tryEdit">编辑设备信息</div>
     </div>
@@ -170,7 +170,7 @@
           purchase_date: '',
           install_date: '',
         },
-        editPassword: 'bianji',
+        editPassword: '123456',
       },
       created() {
         const urlParams = new URLSearchParams(window.location.search);
