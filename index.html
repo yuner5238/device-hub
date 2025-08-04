@@ -3,7 +3,8 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>设备管理主页</title>
+  <title>设备管理系统</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://unpkg.com/vue@2"></script>
   <script src="https://unpkg.com/element-ui/lib/index.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
@@ -12,130 +13,134 @@
   <style>
     body {
       padding: 20px;
-      background: #f5f5f5;
+      background-color: #f5f5f5;
     }
 
     .container {
-      max-width: 900px;
-      margin: 0 auto;
+      max-width: 800px;
+      margin: auto;
     }
 
     .device-card {
-      margin-bottom: 20px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    .device-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      margin-bottom: 15px;
     }
 
     .announcement {
-      margin-bottom: 30px;
+      margin-bottom: 20px;
+    }
+
+    .el-card__body {
+      padding: 16px;
     }
   </style>
 </head>
 
 <body>
   <div id="app" class="container">
-    <el-card v-if="!unlocked" class="announcement">
-      <h3>请输入访问密码</h3>
-      <el-input v-model="inputPassword" placeholder="请输入密码" show-password style="width: 300px; margin-bottom: 10px;"></el-input>
-      <br />
-      <el-button type="primary" @click="checkPassword">确定</el-button>
+    <h2 style="margin-bottom: 15px">设备管理系统</h2>
+
+    <!-- 公告栏 -->
+    <el-card class="announcement" shadow="never" v-if="announcements.length">
+      <h4 style="margin: 0 0 10px 0;">📢 公告</h4>
+      <ul>
+        <li v-for="(item, index) in announcements.slice(0, 3)" :key="index">
+          {{ item }}
+        </li>
+      </ul>
     </el-card>
 
-    <div v-else>
-      <!-- 公告栏 -->
-      <el-alert v-for="(notice, index) in announcements.slice(0, 3)" :key="index" type="info" :title="notice"
-        show-icon class="announcement"></el-alert>
+    <!-- 设备列表 -->
+    <el-card
+      v-for="device in visibleDevices"
+      :key="device.id"
+      class="device-card"
+      shadow="always"
+      @click.native="goToDetail(device.id)"
+    >
+      <div><strong>名称：</strong>{{ device.name }}</div>
+      <div><strong>位置：</strong>{{ device.location }}</div>
+      <div><strong>上次维护：</strong>{{ device.last_maintenance }}</div>
+    </el-card>
 
-      <!-- 设备列表 -->
-      <el-row :gutter="20">
-        <el-col :span="12" v-for="device in visibleDevices" :key="device.id">
-          <el-card class="device-card" @click="goToDevice(device.id)">
-            <h3>{{ device.name || '未命名设备' }}</h3>
-            <p><strong>位置：</strong>{{ device.location || '未知' }}</p>
-            <p><strong>上次维护：</strong>{{ device.last_maintenance || 'N/A' }}</p>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <div v-if="loadingMore" style="text-align: center; margin: 20px;">加载中...</div>
-      <div v-if="!hasMore" style="text-align: center; color: gray;">没有更多设备了</div>
+    <!-- 加载更多 -->
+    <div v-if="loadingMore" style="text-align: center; margin: 15px;">
+      <el-spinner type="snake" />
+    </div>
+    <div v-if="!hasMore && devices.length > 0" style="text-align: center; color: #888; margin-top: 10px;">
+      没有更多设备了
     </div>
   </div>
 
   <script>
+    // Firebase 配置（请替换为你的实际配置）
     const firebaseConfig = {
-      apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
-      authDomain: "device-hub-5238.firebaseapp.com",
-      databaseURL: "https://device-hub-5238-default-rtdb.firebaseio.com",
-      projectId: "device-hub-5238",
-      storageBucket: "device-hub-5238.appspot.com",
-      messagingSenderId: "648686550801",
-      appId: "1:648686550801:web:2f460487e32914042316b0",
-      measurementId: "G-44L5PHN36Y"
+      apiKey: "AIzaSyA_xxxxxx",
+      authDomain: "device-hub.firebaseapp.com",
+      databaseURL: "https://device-hub-default-rtdb.firebaseio.com",
+      projectId: "device-hub",
+      storageBucket: "device-hub.appspot.com",
+      messagingSenderId: "xxxxxxxxxxxx",
+      appId: "1:xxxxxxxxxxxx:web:xxxxxxxxxx"
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     new Vue({
       el: '#app',
-      data: {
-        inputPassword: '',
-        unlocked: false,
-        devices: [],
-        visibleDevices: [],
-        announcements: ["设备维护请联系技术部", "周三将进行全网巡检", "请及时更新维护记录"],
-        pageSize: 5,
-        loadingMore: false,
-        hasMore: true,
-        lastIndex: 0
+      data() {
+        return {
+          devices: [],
+          visibleDevices: [],
+          announcements: [],
+          batchSize: 5,
+          currentIndex: 0,
+          hasMore: true,
+          loadingMore: false
+        };
       },
       created() {
+        this.fetchAnnouncements();
+        this.fetchDevices();
         window.addEventListener('scroll', this.handleScroll);
       },
       destroyed() {
         window.removeEventListener('scroll', this.handleScroll);
       },
       methods: {
-        checkPassword() {
-          if (this.inputPassword === '123456') {
-            this.unlocked = true;
-            this.loadDevices();
-          } else {
-            this.$message.error("密码错误");
-          }
+        fetchAnnouncements() {
+          // 假设公告保存在 /announcements 节点
+          db.ref('announcements').once('value').then(snapshot => {
+            const data = snapshot.val() || [];
+            this.announcements = Array.isArray(data) ? data : Object.values(data);
+          });
         },
-        async loadDevices() {
-          const snapshot = await db.ref('devices').once('value');
-          const raw = snapshot.val() || {};
-          this.devices = Object.entries(raw).map(([id, val]) => ({ id, ...val }));
-          this.appendDevices();
+        fetchDevices() {
+          db.ref('devices').once('value').then(snapshot => {
+            const data = snapshot.val();
+            if (data) {
+              this.devices = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+              this.loadMore();
+            }
+          });
         },
-        appendDevices() {
-          if (this.lastIndex >= this.devices.length) {
-            this.hasMore = false;
-            return;
-          }
+        loadMore() {
+          if (!this.hasMore || this.loadingMore) return;
           this.loadingMore = true;
           setTimeout(() => {
-            const next = this.devices.slice(this.lastIndex, this.lastIndex + this.pageSize);
-            this.visibleDevices = this.visibleDevices.concat(next);
-            this.lastIndex += this.pageSize;
+            const nextBatch = this.devices.slice(this.currentIndex, this.currentIndex + this.batchSize);
+            this.visibleDevices = this.visibleDevices.concat(nextBatch);
+            this.currentIndex += this.batchSize;
+            this.hasMore = this.currentIndex < this.devices.length;
             this.loadingMore = false;
-          }, 500); // 模拟加载延迟
+          }, 500);
         },
         handleScroll() {
-          const scrollBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 50;
-          if (scrollBottom && !this.loadingMore && this.hasMore) {
-            this.appendDevices();
-          }
+          const scrollBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 10;
+          if (scrollBottom) this.loadMore();
         },
-        goToDevice(id) {
-          window.location.href = `detail.html?id=${id}`;
+        goToDetail(id) {
+          window.location.href = `device.html?id=${id}`;
         }
       }
     });
