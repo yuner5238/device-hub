@@ -1,211 +1,198 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>设备管理中心</title>
-  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+  <meta charset="UTF-8">
+  <title>设备详情</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://unpkg.com/vue@2"></script>
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial;
       margin: 0;
-      padding: 0;
-      background: #f5f5f7;
-      color: #1d1d1f;
-    }
-    .container {
-      max-width: 800px;
-      margin: auto;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f2f2f7;
       padding: 20px;
     }
-    .announcement-box {
-      background: #fff;
-      border-radius: 12px;
-      padding: 16px;
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .apple-card {
+      background-color: #fff;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+      padding: 30px;
+    }
+
+    .section-title {
+      font-size: 24px;
+      font-weight: 600;
       margin-bottom: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      color: #1d1d1f;
     }
-    .device-card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      transition: transform 0.2s;
+
+    .el-form-item__label {
+      font-weight: 500;
+      color: #3c3c43;
     }
-    .device-card:hover {
-      transform: translateY(-2px);
+
+    .top-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
     }
-    .edit-btn {
-      float: right;
-    }
+
     @media (max-width: 600px) {
-      .device-card {
-        font-size: 14px;
+      .apple-card {
+        padding: 20px;
+        border-radius: 16px;
+      }
+
+      .section-title {
+        font-size: 20px;
       }
     }
   </style>
 </head>
+
 <body>
   <div id="app" class="container">
-    <!-- 公告栏 -->
-    <div class="announcement-box">
-      <el-row justify="space-between" align="middle">
-        <el-col><h3>📢 公告</h3></el-col>
-        <el-col><el-button @click="openEditDialog" size="small" type="primary" link>编辑</el-button></el-col>
-      </el-row>
-      <el-divider />
-      <div v-for="(ann, key) in announcements" :key="key" style="margin-bottom: 8px">
-        <strong>{{ ann.title }}</strong><br />
-        <span>{{ ann.content }}</span><br />
-        <el-text type="info" size="small">{{ ann.date }}</el-text>
-        <el-divider v-if="key !== Object.keys(announcements).slice(-1)[0]" />
+    <div class="apple-card" v-loading="loading">
+      <div class="top-actions">
+        <h2 class="section-title">设备详情</h2>
+        <el-button type="text" @click="goHome">主页</el-button>
+      </div>
+
+      <div v-if="!device">
+        <el-alert title="未找到设备" type="error" show-icon></el-alert>
+      </div>
+
+      <div v-else>
+        <el-form :model="device" label-width="100px" label-position="left" v-if="!editMode">
+          <el-form-item label="设备名称">{{ device.name || '未命名' }}</el-form-item>
+          <el-form-item label="位置">{{ device.location || '未知' }}</el-form-item>
+          <el-form-item label="购买日期">{{ device.purchase_date || 'N/A' }}</el-form-item>
+          <el-form-item label="安装日期">{{ device.install_date || device.purchase_date || 'N/A' }}</el-form-item>
+          <el-form-item label="备注">{{ device.notes || '无备注' }}</el-form-item>
+        </el-form>
+
+        <el-form :model="editForm" label-width="100px" label-position="left" v-else>
+          <el-form-item label="位置">
+            <el-input v-model="editForm.location"></el-input>
+          </el-form-item>
+          <el-form-item label="购买日期">
+            <el-date-picker v-model="editForm.purchase_date" type="date" placeholder="选择日期"></el-date-picker>
+          </el-form-item>
+          <el-form-item label="安装日期">
+            <el-date-picker v-model="editForm.install_date" type="date" placeholder="选择日期"></el-date-picker>
+          </el-form-item>
+          <el-form-item label="备注">
+            <el-input type="textarea" v-model="editForm.notes" :rows="3"></el-input>
+          </el-form-item>
+          <el-form-item label="编辑密码">
+            <el-input v-model="editPassword" type="password"></el-input>
+          </el-form-item>
+        </el-form>
+
+        <div style="margin-top: 20px;">
+          <el-button v-if="!editMode" type="primary" @click="editMode = true">编辑</el-button>
+          <el-button v-else type="success" @click="saveEdit">保存</el-button>
+          <el-button v-if="editMode" @click="cancelEdit">取消</el-button>
+        </div>
       </div>
     </div>
-
-    <!-- 设备列表 -->
-    <div
-      v-for="device in visibleDevices"
-      :key="device.id"
-      class="device-card"
-      @click="goToDevice(device.id)"
-    >
-      <strong>{{ device.name }}</strong><br />
-      <el-text type="info">{{ device.location }}</el-text>
-    </div>
-
-    <el-backtop :right="20" :bottom="60" />
-    <div v-if="loading" style="text-align: center; color: #999; margin: 20px 0">加载中...</div>
   </div>
-
-  <!-- 编辑公告对话框 -->
-  <el-dialog v-model="editDialogVisible" title="编辑公告" width="500px">
-    <el-form label-width="80px" v-if="editPasswordPassed">
-      <el-form-item label="标题">
-        <el-input v-model="newAnnouncement.title" />
-      </el-form-item>
-      <el-form-item label="内容">
-        <el-input v-model="newAnnouncement.content" type="textarea" rows="3" />
-      </el-form-item>
-      <el-form-item label="日期">
-        <el-date-picker v-model="newAnnouncement.date" type="date" format="YYYY-MM-DD" value-format="YYYY-MM-DD" />
-      </el-form-item>
-    </el-form>
-    <div v-else>
-      <el-input v-model="editPassword" type="password" placeholder="输入密码123456" />
-    </div>
-    <template #footer>
-      <el-button @click="editDialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="saveAnnouncement">确认</el-button>
-    </template>
-  </el-dialog>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <!-- Vue 3 & Element Plus -->
-  <script src="https://unpkg.com/vue@3"></script>
-  <script src="https://unpkg.com/element-plus"></script>
 
   <script>
     const firebaseConfig = {
-       apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
+      apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
       authDomain: "device-hub-5238.firebaseapp.com",
       databaseURL: "https://device-hub-5238-default-rtdb.firebaseio.com",
       projectId: "device-hub-5238",
-      storageBucket: "device-hub-5238.firebasestorage.app",
+      storageBucket: "device-hub-5238.appspot.com",
       messagingSenderId: "648686550801",
-      appId: "1:648686550801:web:2f460487e32914042316b0",
-      measurementId: "G-44L5PHN36Y"
+      appId: "1:648686550801:web:2f460487e32914042316b0"
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const app = Vue.createApp({
-      data() {
-        return {
-          announcements: {},
-          allDevices: [],
-          visibleDevices: [],
-          pageSize: 10,
-          pageIndex: 0,
-          loading: false,
-          editDialogVisible: false,
-          editPassword: '',
-          editPasswordPassed: false,
-          newAnnouncement: {
-            title: '',
-            content: '',
-            date: ''
-          }
-        };
-      },
-      methods: {
-        loadAnnouncements() {
-          firebase.database().ref('announcements').once('value').then(snapshot => {
-            this.announcements = snapshot.val() || {};
-          });
-        },
-        loadDevices() {
-          firebase.database().ref('/').once('value').then(snapshot => {
-            const data = snapshot.val();
-            this.allDevices = Object.entries(data)
-              .filter(([key, value]) => key !== 'announcements')
-              .map(([id, val]) => ({ id, ...val }));
-            this.loadMore();
-          });
-        },
-        loadMore() {
-          if (this.loading) return;
-          this.loading = true;
-          const next = this.allDevices.slice(this.pageIndex, this.pageIndex + this.pageSize);
-          this.visibleDevices.push(...next);
-          this.pageIndex += this.pageSize;
-          this.loading = false;
-        },
-        onScroll() {
-          const bottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 50;
-          if (bottom) this.loadMore();
-        },
-        goToDevice(id) {
-          window.location.href = `device.html?id=${id}`;
-        },
-        openEditDialog() {
-          this.editDialogVisible = true;
-          this.editPassword = '';
-          this.editPasswordPassed = false;
-        },
-        saveAnnouncement() {
-          if (!this.editPasswordPassed) {
-            if (this.editPassword === '123456') {
-              this.editPasswordPassed = true;
-              this.newAnnouncement = {
-                title: '',
-                content: '',
-                date: new Date().toISOString().split('T')[0]
-              };
-            } else {
-              ElementPlus.ElMessage.error('密码错误');
-            }
-            return;
-          }
-          // push 新公告
-          const newKey = 'ann_' + Date.now();
-          firebase.database().ref(`announcements/${newKey}`).set(this.newAnnouncement).then(() => {
-            this.editDialogVisible = false;
-            this.loadAnnouncements();
-            ElementPlus.ElMessage.success('公告已添加');
-          });
+    new Vue({
+      el: '#app',
+      data: {
+        loading: true,
+        device: null,
+        editMode: false,
+        editPassword: '',
+        editForm: {
+          location: '',
+          purchase_date: '',
+          install_date: '',
+          notes: ''
         }
       },
-      mounted() {
-        this.loadAnnouncements();
-        this.loadDevices();
-        window.addEventListener('scroll', this.onScroll);
+      created() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const id = urlParams.get('id');
+        if (id) {
+          this.fetchDevice(id);
+        } else {
+          this.loading = false;
+        }
+      },
+      methods: {
+        fetchDevice(id) {
+          db.ref('devices/' + id).once('value').then(snapshot => {
+            if (snapshot.exists()) {
+              this.device = snapshot.val();
+              this.device.id = id;
+            }
+            this.loading = false;
+          });
+        },
+        saveEdit() {
+          if (this.editPassword !== '123456') {
+            this.$message.error("密码错误");
+            return;
+          }
+          const updates = {
+            location: this.editForm.location,
+            notes: this.editForm.notes,
+            purchase_date: this.editForm.purchase_date,
+            install_date: this.editForm.install_date
+          };
+          db.ref('devices/' + this.device.id).update(updates).then(() => {
+            Object.assign(this.device, updates);
+            this.$message.success("保存成功");
+            this.editMode = false;
+          });
+        },
+        cancelEdit() {
+          this.editMode = false;
+        },
+        goHome() {
+          window.location.href = "index.html";
+        }
+      },
+      watch: {
+        editMode(newVal) {
+          if (newVal && this.device) {
+            this.editForm.location = this.device.location;
+            this.editForm.notes = this.device.notes;
+            this.editForm.purchase_date = this.device.purchase_date || '';
+            this.editForm.install_date = this.device.install_date || this.device.purchase_date || '';
+            this.editPassword = '';
+          }
+        }
       }
     });
-    app.use(ElementPlus);
-    app.mount('#app');
   </script>
 </body>
+
 </html>
