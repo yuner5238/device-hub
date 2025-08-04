@@ -1,49 +1,73 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <title>设备详情</title>
+  <meta charset="UTF-8" />
+  <title>DeviceHub - 设备详情</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css" />
   <style>
-    body { font-family: sans-serif; margin: 2em; }
-    .edit-field { display: none; margin-top: 0.5em; }
-    .view-field span { font-weight: normal; }
-    .field-group { margin-bottom: 1em; }
+    body {
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    #app {
+      max-width: 700px;
+      margin: auto;
+    }
+    .password-dialog .el-dialog__body {
+      padding-bottom: 0;
+    }
+    .edit-buttons {
+      margin-top: 20px;
+    }
   </style>
-
-  <!-- Firebase Compatibility (Compat) SDK 加载 -->
-  <!-- 注意：请将 9.22.0 替换为你从 Firebase 控制台 Project settings -> Your apps -> SDK setup and configuration 中找到的实际版本号 -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <!-- 如果你未来计划使用 Firebase 认证，还需要这个： -->
-  <!-- <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script> -->
-  <!-- 如果你不需要 Analytics，可以不加载这个SDK -->
-  <!-- <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script> -->
-
 </head>
 <body>
-  <h2 id="deviceName">设备名称</h2>
+  <div id="app">
+    <el-page-header content="设备详情" @back="goBack" style="margin-bottom: 20px;"></el-page-header>
 
-  <div class="field-group">
-    <div class="view-field">位置: <span id="deviceLocation"></span></div>
-    <input class="edit-field" id="editLocation" type="text" />
-  </div>
+    <el-card v-if="device" shadow="hover">
+      <el-form :model="device" label-width="100px" :disabled="!isEditing">
+        <el-form-item label="设备名称">
+          <el-input v-model="device.name" :disabled="true"></el-input>
+        </el-form-item>
+        <el-form-item label="位置">
+          <el-input v-model="device.location"></el-input>
+        </el-form-item>
+        <el-form-item label="上次维护">
+          <el-date-picker
+            v-model="device.last_maintenance"
+            type="date"
+            placeholder="选择日期"
+            format="yyyy-MM-dd"
+            value-format="yyyy-MM-dd"
+          ></el-date-picker>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input
+            type="textarea"
+            v-model="device.notes"
+            :rows="4"
+          ></el-input>
+        </el-form-item>
+      </el-form>
 
-  <div class="field-group">
-    <div class="view-field">上次维护: <span id="deviceMaintenance"></span></div>
-  </div>
+      <div class="edit-buttons" v-if="!isEditing">
+        <el-button type="primary" @click="showPasswordDialog">编辑</el-button>
+      </div>
 
-  <div class="field-group">
-    <div class="view-field">备注: <span id="deviceNotes"></span></div>
-    <textarea class="edit-field" id="editNotes" rows="4" cols="40"></textarea>
-  </div>
+      <div class="edit-buttons" v-else>
+        <el-button type="success" @click="saveDevice">保存</el-button>
+        <el-button @click="cancelEdit">取消</el-button>
+      </div>
+    </el-card>
 
-  <div class="edit-field field-group">
-    密码：<input type="password" id="inputEditPassword" />
-  </div>
-
-  <button id="btnEdit">编辑</button>
-  <button id="btnSaveDeviceInfo" class="edit-field">保存</button>
-
-  <script src="device.js"></script>
-</body>
-</html>
+    <el-dialog
+      title="请输入编辑密码"
+      :visible.sync="passwordDialogVisible"
+      width="400px"
+      :before-close="() => { inputEditPassword = ''; passwordError = '' }"
+      class="password-dialog"
+    >
+      <el-input
+        v-model="inputEditPassword"
+        placeholder
