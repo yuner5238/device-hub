@@ -2,17 +2,18 @@
 <html lang="zh">
 
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>设备详情</title>
-  <script src="https://unpkg.com/vue@2"></script>e
+  <script src="https://unpkg.com/vue@2"></script>
   <script src="https://unpkg.com/element-ui/lib/index.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/element-ui/eqweeib/theme-chalk/index.css">
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css" />
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body {
       padding: 20px;
     }
+
     .container {
       max-width: 600px;
       margin: 0 auto;
@@ -25,11 +26,11 @@
     <el-card v-loading="loading">
       <h2 style="margin-bottom: 20px">设备详情</h2>
 
-      <div v-if="!device">
+      <div v-if="!device && !loading">
         <el-alert title="未找到设备" type="error"></el-alert>
       </div>
 
-      <div v-else>
+      <div v-else-if="device">
         <el-form :model="device" label-width="120px" label-position="left" v-if="!editMode">
           <el-form-item label="设备名称">{{ device.name || 'N/A' }}</el-form-item>
           <el-form-item label="位置">{{ device.location || 'N/A' }}</el-form-item>
@@ -61,7 +62,7 @@
   <script>
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
-      authDomain: 123"YOUR_PROJECT.firebaseapp.com",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
       databaseURL: "https://YOUR_PROJECT.firebaseio.com",
       projectId: "YOUR_PROJECT_ID",
       storageBucket: "YOUR_PROJECT.appspot.com",
@@ -99,7 +100,12 @@
             if (snapshot.exists()) {
               this.device = snapshot.val();
               this.device.id = id;
+            } else {
+              this.device = null; // 设备不存在时，置空device
             }
+            this.loading = false;
+          }).catch(() => {
+            this.device = null;
             this.loading = false;
           });
         },
@@ -116,6 +122,8 @@
             this.device.notes = this.editForm.notes;
             this.$message.success('保存成功');
             this.editMode = false;
+          }).catch(() => {
+            this.$message.error('保存失败，请稍后重试');
           });
         },
         cancelEdit() {
