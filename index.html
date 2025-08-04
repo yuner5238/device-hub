@@ -9,19 +9,20 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
       background-color: #f5f5f7;
-      margin: 0; padding: 0;
+      margin: 0;
+      padding: 0;
     }
     .container {
-      max-width: 900px;
+      max-width: 960px;
       margin: 0 auto;
-      padding: 20px;
+      padding: 24px;
     }
     .announcement {
       background: white;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
     .announcement-header {
       display: flex;
@@ -38,19 +39,20 @@
       font-size: 14px;
       cursor: pointer;
       color: #409EFF;
+      user-select: none;
     }
     .device-list {
       background: white;
-      border-radius: 12px;
+      border-radius: 14px;
       padding: 0;
       overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
     .device-item {
-      padding: 16px 20px;
+      padding: 18px 20px;
       border-bottom: 1px solid #eee;
-      transition: background 0.2s;
       cursor: pointer;
+      transition: background 0.2s;
     }
     .device-item:hover {
       background: #fafafa;
@@ -60,8 +62,8 @@
       font-weight: 500;
     }
     .device-meta {
-      color: #888;
       font-size: 14px;
+      color: #888;
       margin-top: 6px;
     }
     .device-notes {
@@ -71,7 +73,7 @@
     }
     @media (max-width: 600px) {
       .device-item {
-        padding: 12px 16px;
+        padding: 14px 16px;
       }
       .device-name {
         font-size: 16px;
@@ -86,7 +88,7 @@
         <h2>📢 公告栏</h2>
         <span class="edit-button" @click="editAnnouncement">编辑</span>
       </div>
-      <div v-for="(item, key) in announcements" :key="key" style="margin-bottom: 8px;">
+      <div v-for="(item, key) in announcements" :key="key" style="margin-bottom: 12px;">
         <strong>{{ item.title }}</strong><br />
         <span>{{ item.content }}</span><br />
         <small style="color: #999;">{{ item.date }}</small>
@@ -96,19 +98,17 @@
     <div class="device-list">
       <div v-for="device in displayedDevices" :key="device.key" class="device-item" @click="goToDevice(device.key)">
         <div class="device-name">{{ device.name }}</div>
-        <div class="device-meta">{{ device.location }} · 采购日期: {{ device.purchase_date }}</div>
-        <div v-if="device.notes" class="device-notes">备注：{{ device.notes }}</div>
+        <div class="device-meta">{{ device.location }} · 采购: {{ device.purchase_date }}</div>
+        <div class="device-notes" v-if="device.notes">备注：{{ device.notes }}</div>
       </div>
     </div>
   </div>
 
-
-<script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://unpkg.com/element-ui/lib/index.js"></script>
   <script>
-    // Firebase 配置（已自动填入）
     const firebaseConfig = {
       apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
       authDomain: "device-hub-5238.firebaseapp.com",
@@ -119,21 +119,19 @@
       appId: "1:648686550801:web:2f460487e32914042316b0",
       measurementId: "G-44L5PHN36Y"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     new Vue({
       el: '#app',
       data: {
-        announcements: {},
+        announcements: [],
         devices: [],
         displayedDevices: [],
         devicesPerPage: 10,
         currentPage: 0,
         hasMore: true,
-        announcementEditPassword: '123456',
-        observer: null
+        announcementEditPassword: '123456'
       },
       created() {
         this.fetchAnnouncements();
@@ -185,7 +183,7 @@
           const scrollY = window.scrollY || window.pageYOffset;
           const visibleHeight = window.innerHeight;
           const pageHeight = document.documentElement.scrollHeight;
-          if (scrollY + visibleHeight + 100 >= pageHeight) {
+          if (scrollY + visibleHeight + 80 >= pageHeight) {
             this.loadMore();
           }
         },
@@ -213,15 +211,13 @@
             promises.push(this.$prompt(`编辑公告标题（第${i + 1}条）`, '编辑公告', {
               confirmButtonText: '确定',
               cancelButtonText: '跳过',
-              inputValue: ann.title,
-              inputPlaceholder: '标题'
+              inputValue: ann.title
             }).then(({ value }) => {
               ann.title = value;
               return this.$prompt(`编辑公告内容（第${i + 1}条）`, '编辑公告', {
                 confirmButtonText: '确定',
                 cancelButtonText: '跳过',
-                inputValue: ann.content,
-                inputPlaceholder: '内容'
+                inputValue: ann.content
               }).then(({ value }) => {
                 ann.content = value;
                 return ann;
@@ -231,8 +227,8 @@
 
           Promise.all(promises).then(results => {
             db.ref('announcements').once('value').then(snapshot => {
-              const allAnnouncements = snapshot.val() || {};
-              const keys = Object.keys(allAnnouncements).sort();
+              const all = snapshot.val() || {};
+              const keys = Object.keys(all).sort();
               let updates = {};
               for (let i = 0; i < results.length; i++) {
                 if (i >= keys.length) break;
