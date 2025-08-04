@@ -1,48 +1,31 @@
-<!-- device.html -->
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <title>设备详情</title>
-  <style>
-    body { font-family: sans-serif; margin: 2em; }
-    .edit-field { display: none; margin-top: 0.5em; }
-    .view-field span { font-weight: normal; }
-    .field-group { margin-bottom: 1em; }
-  </style>
-
-  <!-- 【重要修改】移除所有 -compat.js 的加载！ -->
-  <!-- 因为你的 device.js 会使用模块化导入方式加载 Firebase SDK -->
-  <!-- <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script> -->
-  <!-- <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script> -->
-  <!-- ... 其他 compat 脚本也移除 ... -->
-
 </head>
 <body>
-  <h2 id="deviceName">设备名称</h2>
+  <h1 id="deviceName">加载中...</h1>
+  <p>位置：<span id="deviceLocation"></span></p>
+  <p>维护时间：<span id="deviceMaintenance"></span></p>
+  <p>备注：<span id="deviceNotes"></span></p>
 
-  <div class="field-group">
-    <div class="view-field">位置: <span id="deviceLocation"></span></div>
-    <input class="edit-field" id="editLocation" type="text" />
-  </div>
-
-  <div class="field-group">
-    <div class="view-field">上次维护: <span id="deviceMaintenance"></span></div>
-  </div>
-
-  <div class="field-group">
-    <div class="view-field">备注: <span id="deviceNotes"></span></div>
-    <textarea class="edit-field" id="editNotes" rows="4" cols="40"></textarea>
-  </div>
-
-  <div class="edit-field field-group">
-    密码：<input type="password" id="inputEditPassword" />
+  <div class="edit-field">
+    <input id="editLocation" placeholder="新位置" />
+    <input id="editNotes" placeholder="备注" />
+    <input id="inputEditPassword" type="password" placeholder="编辑密码（仅测试用）" />
   </div>
 
   <button id="btnEdit">编辑</button>
-  <button id="btnSaveDeviceInfo" class="edit-field">保存</button>
+  <button id="btnSaveDeviceInfo">保存</button>
 
-  <!-- 【保持不变】这个加载方式是正确的，因为它使用了 type="module" -->
-  <script type="module" src="device.js"></script>
+  <hr>
+  <h3>登录</h3>
+  <input id="email" placeholder="邮箱" />
+  <input id="password" type="password" placeholder="密码" />
+  <button id="btnLogin">登录</button>
+  <p id="loginStatus"></p>
+
+  <script type="module" src="./device.js"></script>
 </body>
 </html>
