@@ -1,57 +1,140 @@
-<!-- device.html -->
 <!DOCTYPE html>
-<html>
+<html lang="zh">
+
 <head>
   <meta charset="UTF-8">
   <title>设备详情</title>
+  <script src="https://unpkg.com/vue@2"></script>
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
-    body { padding: 40px; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
-    .el-card { max-width: 600px; margin: auto; }
-    .el-form-item__label { font-weight: bold; }
-    #edit-password { width: 100%; }
-    .actions { text-align: center; margin-top: 20px; }
+    body {
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
   </style>
 </head>
+
 <body>
-  <div id="app">
-    <el-card v-if="device" shadow="hover">
-      <h2>{{ device.name || '未知设备' }}</h2>
+  <div id="app" class="container">
+    <el-card v-loading="loading">
+      <h2 style="margin-bottom: 20px">设备详情</h2>
 
-      <el-form :model="device" label-width="100px" v-if="!editMode">
-        <el-form-item label="位置">{{ device.location || 'N/A' }}</el-form-item>
-        <el-form-item label="上次维护">{{ device.last_maintenance || 'N/A' }}</el-form-item>
-        <el-form-item label="备注">{{ device.notes || '无' }}</el-form-item>
-      </el-form>
+      <div v-if="!device">
+        <el-alert title="未找到设备" type="error"></el-alert>
+      </div>
 
-      <el-form v-else :model="editForm" label-width="100px">
-        <el-form-item label="位置">
-          <el-input v-model="editForm.location"></el-input>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input type="textarea" v-model="editForm.notes" :rows="3"></el-input>
-        </el-form-item>
-        <el-form-item label="编辑密码">
-          <el-input type="password" v-model="editPassword" id="edit-password"></el-input>
-        </el-form-item>
-      </el-form>
+      <div v-else>
+        <el-form :model="device" label-width="120px" label-position="left" v-if="!editMode">
+          <el-form-item label="设备名称">{{ device.name || 'N/A' }}</el-form-item>
+          <el-form-item label="位置">{{ device.location || 'N/A' }}</el-form-item>
+          <el-form-item label="上次维护">{{ device.last_maintenance || 'N/A' }}</el-form-item>
+          <el-form-item label="备注">{{ device.notes || '无' }}</el-form-item>
+        </el-form>
 
-      <div class="actions">
-        <el-button type="primary" icon="el-icon-edit" v-if="!editMode" @click="startEdit">编辑</el-button>
-        <el-button type="success" icon="el-icon-check" v-if="editMode" @click="saveEdit">保存</el-button>
-        <el-button v-if="editMode" @click="cancelEdit">取消</el-button>
+        <el-form :model="editForm" label-width="120px" label-position="left" v-else>
+          <el-form-item label="位置">
+            <el-input v-model="editForm.location"></el-input>
+          </el-form-item>
+          <el-form-item label="备注">
+            <el-input type="textarea" v-model="editForm.notes" :rows="3"></el-input>
+          </el-form-item>
+          <el-form-item label="编辑密码">
+            <el-input type="password" v-model="editPassword"></el-input>
+          </el-form-item>
+        </el-form>
+
+        <div style="margin-top: 20px">
+          <el-button v-if="!editMode" type="primary" @click="editMode = true">编辑</el-button>
+          <el-button v-else type="success" @click="saveEdit">保存</el-button>
+          <el-button v-if="editMode" @click="cancelEdit">取消</el-button>
+        </div>
       </div>
     </el-card>
   </div>
 
-  <!-- Element UI 和 Vue -->
-  <script src="https://unpkg.com/vue@2.6.14/dist/vue.min.js"></script>
-  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: 123"YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  <script src="device.js"></script>
+    new Vue({
+      el: '#app',
+      data: {
+        loading: true,
+        device: null,
+        editMode: false,
+        editForm: {
+          location: '',
+          notes: ''
+        },
+        editPassword: ''
+      },
+      created() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const id = urlParams.get('id');
+        if (id) {
+          this.fetchDeviceData(id);
+        } else {
+          this.loading = false;
+        }
+      },
+      methods: {
+        fetchDeviceData(id) {
+          db.ref('devices/' + id).once('value').then(snapshot => {
+            if (snapshot.exists()) {
+              this.device = snapshot.val();
+              this.device.id = id;
+            }
+            this.loading = false;
+          });
+        },
+        saveEdit() {
+          if (this.editPassword !== 'bianji') {
+            this.$message.error('编辑密码错误');
+            return;
+          }
+          db.ref('devices/' + this.device.id).update({
+            location: this.editForm.location,
+            notes: this.editForm.notes
+          }).then(() => {
+            this.device.location = this.editForm.location;
+            this.device.notes = this.editForm.notes;
+            this.$message.success('保存成功');
+            this.editMode = false;
+          });
+        },
+        cancelEdit() {
+          this.editForm.location = this.device.location;
+          this.editForm.notes = this.device.notes;
+          this.editMode = false;
+        }
+      },
+      watch: {
+        editMode(newVal) {
+          if (newVal && this.device) {
+            this.editForm.location = this.device.location;
+            this.editForm.notes = this.device.notes;
+            this.editPassword = '';
+          }
+        }
+      }
+    });
+  </script>
 </body>
+
 </html>
