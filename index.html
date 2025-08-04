@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>设备管理系统 - 首页</title>
+  <title>设备详情</title>
   <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css" />
   <style>
     body {
@@ -12,113 +12,74 @@
       margin: 0; padding: 0;
     }
     .container {
-      max-width: 920px;
+      max-width: 800px;
       margin: 0 auto;
-      padding: 24px;
+      padding: 32px 16px;
     }
-    .announcement {
-      background: white;
-      border-radius: 16px;
-      padding: 20px;
-      margin-bottom: 30px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-    }
-    .announcement-header {
+    .top-bar {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
+      justify-content: flex-end;
+      margin-bottom: 20px;
     }
-    .announcement h2 {
-      font-size: 22px;
-      margin: 0;
+    .device-card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 30px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    }
+    h2 {
+      font-size: 26px;
+      margin-bottom: 16px;
       font-weight: 600;
     }
-    .edit-button {
-      font-size: 14px;
-      cursor: pointer;
-      color: #409EFF;
-    }
-    .announcement-group {
-      padding: 8px 0;
-      border-bottom: 1px solid #eee;
-    }
-    .announcement-group:last-child {
-      border-bottom: none;
-    }
-    .announcement-group strong {
+    .info-line {
+      margin-bottom: 12px;
       font-size: 16px;
+      color: #333;
     }
-    .announcement-group small {
-      color: #999;
-    }
-
-    .device-list {
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-      overflow: hidden;
-    }
-
-    .device-item {
-      padding: 20px;
-      border-bottom: 1px solid #eee;
-      transition: background 0.2s;
-      cursor: pointer;
-    }
-    .device-item:hover {
-      background-color: #f2f2f2;
-    }
-    .device-name {
-      font-size: 18px;
+    .label {
       font-weight: 500;
-    }
-    .device-meta {
       color: #666;
-      font-size: 14px;
-      margin-top: 6px;
+      margin-right: 6px;
+    }
+    .edit-btn {
+      margin-top: 24px;
+      float: right;
     }
 
     @media (max-width: 600px) {
-      .device-name { font-size: 16px; }
-      .device-meta { font-size: 13px; }
+      .device-card { padding: 20px; }
+      h2 { font-size: 22px; }
+      .info-line { font-size: 15px; }
     }
   </style>
 </head>
 <body>
   <div id="app" class="container">
-    <!-- 公告栏 -->
-    <div class="announcement">
-      <div class="announcement-header">
-        <h2>📢 公告栏</h2>
-        <span class="edit-button" @click="editAnnouncement">编辑</span>
-      </div>
-      <div v-for="(item, key) in announcements" :key="key" class="announcement-group">
-        <strong>{{ item.title }}</strong><br />
-        <span>{{ item.content }}</span><br />
-        <small>{{ item.date }}</small>
-      </div>
+    <div class="top-bar">
+      <el-button type="text" icon="el-icon-s-home" @click="goHome">主页</el-button>
     </div>
 
-    <!-- 设备列表 -->
-    <div class="device-list">
-      <div v-for="device in displayedDevices" :key="device.key" class="device-item" @click="goToDevice(device.key)">
-        <div class="device-name">{{ device.name }}</div>
-        <div class="device-meta">
-          {{ device.location }} · 采购日期：{{ device.purchase_date }}<br>
-          {{ device.notes }}
-        </div>
-      </div>
+    <div class="device-card" v-if="device">
+      <h2>{{ device.name }}</h2>
+      <div class="info-line"><span class="label">位置:</span>{{ device.location }}</div>
+      <div class="info-line"><span class="label">采购日期:</span>{{ device.purchase_date }}</div>
+      <div class="info-line"><span class="label">安装日期:</span>{{ device.install_date }}</div>
+      <div class="info-line"><span class="label">备注:</span>{{ device.notes || '无' }}</div>
+      <el-button type="primary" class="edit-btn" @click="promptEdit">编辑</el-button>
+    </div>
+    <div v-else>
+      <el-empty description="未找到设备"></el-empty>
     </div>
   </div>
 
-  <!-- 脚本依赖 -->
-  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.min.js"></script>
+  <!-- 依赖 -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+
   <script>
-    // Firebase 配置
     const firebaseConfig = {
       apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
       authDomain: "device-hub-5238.firebaseapp.com",
@@ -136,112 +97,55 @@
     new Vue({
       el: '#app',
       data: {
-        announcements: [],
-        devices: [],
-        displayedDevices: [],
-        devicesPerPage: 10,
-        currentPage: 0,
-        loading: false,
-        announcementEditPassword: '123456',
+        deviceId: '',
+        device: null,
+        editPassword: '123456'
       },
       created() {
-        this.fetchAnnouncements();
-        this.fetchDevices();
-        window.addEventListener('scroll', this.handleScroll);
-      },
-      destroyed() {
-        window.removeEventListener('scroll', this.handleScroll);
+        const params = new URLSearchParams(location.search);
+        this.deviceId = params.get('id');
+        if (this.deviceId) this.fetchDevice();
       },
       methods: {
-        fetchAnnouncements() {
-          db.ref('announcements').orderByKey().limitToLast(3).once('value').then(snapshot => {
-            let data = snapshot.val() || {};
-            let arr = Object.entries(data).map(([k, v]) => v);
-            arr.sort((a, b) => new Date(b.date) - new Date(a.date));
-            this.announcements = arr.slice(0, 3);
+        fetchDevice() {
+          db.ref(this.deviceId).once('value').then(snapshot => {
+            this.device = snapshot.val();
           });
         },
-        fetchDevices() {
-          db.ref().once('value').then(snapshot => {
-            const data = snapshot.val() || {};
-            const result = [];
-            for (const key in data) {
-              if (key === 'announcements') continue;
-              const dev = data[key];
-              if (dev && dev.name) {
-                result.push({ ...dev, key });
-              }
-            }
-            result.sort((a, b) => a.key.localeCompare(b.key));
-            this.devices = result;
-            this.loadMore();
-          });
+        goHome() {
+          window.location.href = 'index.html';
         },
-        loadMore() {
-          if (this.loading) return;
-          this.loading = true;
-          const start = this.currentPage * this.devicesPerPage;
-          const next = this.devices.slice(start, start + this.devicesPerPage);
-          if (next.length > 0) {
-            this.displayedDevices.push(...next);
-            this.currentPage++;
-          }
-          this.loading = false;
-        },
-        handleScroll() {
-          const bottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 20;
-          if (bottom) this.loadMore();
-        },
-        goToDevice(key) {
-          window.location.href = `device.html?id=${encodeURIComponent(key)}`;
-        },
-        editAnnouncement() {
-          this.$prompt('请输入编辑密码', '密码验证', {
+        promptEdit() {
+          this.$prompt('请输入编辑密码', '验证', {
             confirmButtonText: '确定',
             cancelButtonText: '取消',
-            inputType: 'password',
-            inputPlaceholder: '请输入密码'
+            inputType: 'password'
           }).then(({ value }) => {
-            if (value === this.announcementEditPassword) {
-              this.openAnnouncementEditor();
+            if (value === this.editPassword) {
+              this.editDevice();
             } else {
               this.$message.error('密码错误');
             }
-          }).catch(() => {});
+          });
         },
-        openAnnouncementEditor() {
-          let promises = [];
-          for (let i = 0; i < this.announcements.length; i++) {
-            let ann = this.announcements[i];
-            promises.push(this.$prompt(`编辑公告标题（第${i + 1}条）`, '编辑公告', {
-              confirmButtonText: '确定',
-              cancelButtonText: '跳过',
-              inputValue: ann.title
-            }).then(({ value }) => {
-              ann.title = value;
-              return this.$prompt(`编辑公告内容（第${i + 1}条）`, '编辑公告', {
-                confirmButtonText: '确定',
-                cancelButtonText: '跳过',
-                inputValue: ann.content
-              }).then(({ value }) => {
-                ann.content = value;
-                return ann;
-              });
-            }).catch(() => ann));
-          }
-          Promise.all(promises).then(results => {
-            db.ref('announcements').once('value').then(snapshot => {
-              const all = snapshot.val() || {};
-              const keys = Object.keys(all).sort();
-              let updates = {};
-              for (let i = 0; i < results.length; i++) {
-                if (!keys[i]) break;
-                updates[`announcements/${keys[i]}/title`] = results[i].title;
-                updates[`announcements/${keys[i]}/content`] = results[i].content;
-              }
-              db.ref().update(updates).then(() => {
-                this.$message.success('公告已更新');
-                this.fetchAnnouncements();
+        editDevice() {
+          this.$prompt('修改位置', '编辑设备', {
+            inputValue: this.device.location,
+            confirmButtonText: '下一步',
+            cancelButtonText: '取消'
+          }).then(({ value: loc }) => {
+            this.$prompt('修改备注', '编辑设备', {
+              inputValue: this.device.notes || '',
+              confirmButtonText: '保存',
+              cancelButtonText: '取消'
+            }).then(({ value: notes }) => {
+              db.ref(this.deviceId).update({
+                location: loc,
+                notes: notes
+              }).then(() => {
+                this.$message.success('更新成功');
+                this.device.location = loc;
+                this.device.notes = notes;
               });
             });
           });
