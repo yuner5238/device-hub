@@ -1,137 +1,155 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>设备管理系统</title>
-  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/element-ui@2.15.14/lib/index.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui@2.15.14/lib/theme-chalk/index.css"/>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>设备详情 - Device Hub</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css" />
   <style>
     body {
+      margin: 0; padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
       background: #fff;
       color: #1d1d1f;
-      margin: 0;
-      padding: 24px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      line-height: 1.5;
+      font-weight: 400;
+      font-size: 17px;
     }
-    #app {
-      max-width: 900px;
-      margin: 0 auto;
-    }
-    h1 {
-      font-size: 34px;
-      font-weight: 600;
-      margin-bottom: 24px;
-    }
-    .announcements {
-      background: #f5f5f7;
-      border-radius: 12px;
-      padding: 24px;
-      border: 1px solid #d2d2d7;
-      margin-bottom: 40px;
-    }
-    .announcement-item {
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #d2d2d7;
-      position: relative;
-    }
-    .device-list {
-      border: 1px solid #d2d2d7;
-      border-radius: 16px;
-      overflow: hidden;
-      background: #fff;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    .container {
+      max-width: 720px;
+      margin: 40px auto;
+      padding: 0 24px;
       display: flex;
       flex-direction: column;
+      gap: 24px;
     }
-    .device-card {
-      padding: 20px 24px;
-      border-bottom: 1px solid #e5e5ea;
-      cursor: pointer;
-    }
-    .device-card:hover {
-      background-color: #f2f2f7;
-    }
-    .device-name {
+    h1 {
       font-weight: 600;
+      font-size: 28px;
+      letter-spacing: -.02em;
+      margin-bottom: 12px;
+    }
+    .label {
+      color: #6e6e73;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .value {
       font-size: 18px;
       color: #1d1d1f;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #d2d2d7;
+      padding-bottom: 6px;
     }
-    .device-location {
-      font-size: 14px;
-      color: #6e6e73;
-      margin: 2px 0;
+    .input-el {
+      width: 100%;
     }
-    .device-note {
-      font-size: 15px;
-      color: #3c3c4399;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .device-date {
-      font-size: 13px;
-      color: #6e6e73;
-      margin-top: 6px;
-    }
-    .edit-controls {
-      margin-bottom: 10px;
-    }
-    .delete-button {
-      position: absolute;
-      top: 0;
-      right: 0;
-      font-size: 14px;
-      color: red;
+    .btn-edit {
+      align-self: flex-end;
+      font-weight: 600;
+      color: #0071e3;
       cursor: pointer;
+      user-select: none;
+      margin-bottom: 24px;
     }
-    @media (max-width: 700px) {
-      .device-card {
-        padding: 16px 20px;
+    .btn-save {
+      background-color: #0071e3;
+      border-color: #0071e3;
+      color: white;
+      font-weight: 600;
+      width: 100%;
+    }
+    .btn-save:disabled {
+      background-color: #a2a2a6;
+      border-color: #a2a2a6;
+    }
+    @media (max-width: 600px) {
+      .container {
+        margin: 24px 16px;
+      }
+      h1 {
+        font-size: 24px;
+      }
+      .value, .input-el {
+        font-size: 16px;
       }
     }
   </style>
 </head>
 <body>
-  <div id="app">
-    <h1>设备管理系统</h1>
+  <div id="app" class="container">
+    <h1>{{ device.name || '加载中...' }}</h1>
 
-    <div class="announcements">
-      <div class="edit-controls">
-        <el-button type="primary" size="mini" @click="addAnnouncement">新增公告</el-button>
-        <el-button type="success" size="mini" @click="saveAnnouncements">保存公告</el-button>
+    <div v-if="!editMode">
+      <div>
+        <div class="label">位置</div>
+        <div class="value">{{ device.location || '-' }}</div>
       </div>
-
-      <div v-for="(item, index) in announcements" :key="item.id || index" class="announcement-item">
-        <div class="delete-button" @click="deleteAnnouncement(index)">🗑 删除</div>
-
-        <el-input v-model="item.title" placeholder="请输入公告标题" />
-        <el-input type="textarea" v-model="item.content" placeholder="请输入公告内容" :autosize="{ minRows: 2, maxRows: 4 }" />
-        <el-date-picker v-model="item.date" type="date" placeholder="选择日期" format="yyyy-MM-dd" value-format="yyyy-MM-dd" />
+      <div>
+        <div class="label">采购日期</div>
+        <div class="value">{{ device.purchase_date || '-' }}</div>
       </div>
+      <div>
+        <div class="label">安装日期</div>
+        <div class="value">{{ device.install_date || device.purchase_date || '-' }}</div>
+      </div>      
+      <div>
+        <div class="label">备注</div>
+        <div class="value">{{ device.notes || '-' }}</div>
+      </div>
+      <div class="btn-edit" @click="tryEdit">编辑设备信息</div>
     </div>
 
-    <div class="device-list">
-      <div class="device-card" v-for="(device, key) in devices" :key="key" @click="goToDetail(key)">
-        <div class="device-name">{{ device.name }}</div>
-        <div class="device-location">{{ device.location }}</div>
-        <div class="device-note">{{ device.notes }}</div>
-        <div class="device-date">购买日期：{{ device.purchase_date }}｜安装日期：{{ device.install_date }}</div>
-      </div>
+    <div v-else>
+      <el-form :model="form" label-position="top" size="medium" class="input-el">
+        <el-form-item label="位置">
+          <el-input v-model="form.location" placeholder="请输入位置"></el-input>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input type="textarea" v-model="form.notes" placeholder="请输入备注" rows="3"></el-input>
+        </el-form-item>
+        <el-form-item label="采购日期">
+          <el-date-picker
+            v-model="form.purchase_date"
+            type="date"
+            placeholder="请选择采购日期"
+            style="width: 100%;"
+            format="yyyy-MM-dd"
+            value-format="yyyy-MM-dd"
+          ></el-date-picker>
+        </el-form-item>
+        <el-form-item label="安装日期">
+          <el-date-picker
+            v-model="form.install_date"
+            type="date"
+            placeholder="请选择安装日期"
+            style="width: 100%;"
+            format="yyyy-MM-dd"
+            value-format="yyyy-MM-dd"
+          ></el-date-picker>
+        </el-form-item>
+        <el-button type="primary" class="btn-save" :disabled="loading" @click="save">保存</el-button>
+        <el-button style="margin-left: 12px;" @click="cancelEdit">取消</el-button>
+      </el-form>
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
       authDomain: "device-hub-5238.firebaseapp.com",
       databaseURL: "https://device-hub-5238-default-rtdb.firebaseio.com",
       projectId: "device-hub-5238",
-      storageBucket: "device-hub-5238.appspot.com",
+      storageBucket: "device-hub-5238.firebasestorage.app",
       messagingSenderId: "648686550801",
       appId: "1:648686550801:web:2f460487e32914042316b0",
       measurementId: "G-44L5PHN36Y"
@@ -142,52 +160,74 @@
     new Vue({
       el: '#app',
       data: {
-        announcements: [],
-        devices: {}
-      },
-      methods: {
-        loadData() {
-          db.ref("announcements").once("value", snapshot => {
-            const raw = snapshot.val() || {};
-            this.announcements = Object.entries(raw).map(([id, data]) => ({ id, ...data }))
-              .sort((a, b) => new Date(b.date) - new Date(a.date));
-          });
-
-          db.ref("devices").once("value", snapshot => {
-            this.devices = snapshot.val() || {};
-          });
-        },
-        addAnnouncement() {
-          this.announcements.unshift({
-            title: "",
-            content: "",
-            date: new Date().toISOString().split("T")[0]
-          });
-        },
-        deleteAnnouncement(index) {
-          this.announcements.splice(index, 1);
-        },
-        saveAnnouncements() {
-          const updates = {};
-          this.announcements.forEach(item => {
-            const id = item.id || db.ref("announcements").push().key;
-            updates[id] = {
-              title: item.title || "",
-              content: item.content || "",
-              date: item.date || ""
-            };
-          });
-          db.ref("announcements").set(updates).then(() => {
-            this.$message.success("保存成功");
-            this.loadData();
-          });
-        },
-        goToDetail(id) {
-          window.location.href = `device.html?id=${id}`;
+        deviceId: null,
+        device: {},
+        editMode: false,
+        loading: false,
+        form: {
+          location: '',
+          notes: '',
+          purchase_date: '',
+          install_date: '',
         }
       },
       created() {
-        this.loadData();
+        const urlParams = new URLSearchParams(window.location.search);
+        this.deviceId = urlParams.get('id');
+        if (!this.deviceId) {
+          alert('无效的设备ID');
+          return;
+        }
+        this.loadDevice();
+      },
+      methods: {
+        loadDevice() {
+          db.ref(`devices/${this.deviceId}`).once('value').then(snapshot => {
+            const data = snapshot.val();
+            if (data) {
+              this.device = data;
+              if (!this.device.install_date && this.device.purchase_date) {
+                this.device.install_date = this.device.purchase_date;
+              }
+            } else {
+              alert('设备不存在');
+            }
+          }).catch(() => {
+            alert('加载设备失败');
+          });
+        },
+        tryEdit() {
+          this.startEdit(); // 直接进入编辑模式，无需输入密码
+        },
+        startEdit() {
+          this.editMode = true;
+          this.form.location = this.device.location || '';
+          this.form.notes = this.device.notes || '';
+          this.form.purchase_date = this.device.purchase_date || '';
+          this.form.install_date = this.device.install_date || this.device.purchase_date || '';
+        },
+        cancelEdit() {
+          this.editMode = false;
+        },
+        save() {
+          if (this.loading) return;
+          this.loading = true;
+          const updates = {
+            location: this.form.location.trim(),
+            notes: this.form.notes.trim(),
+            purchase_date: this.form.purchase_date,
+            install_date: this.form.install_date || this.form.purchase_date,
+          };
+          db.ref(`devices/${this.deviceId}`).update(updates).then(() => {
+            this.$message.success('保存成功');
+            this.device = { ...this.device, ...updates };
+            this.editMode = false;
+          }).catch(() => {
+            this.$message.error('保存失败');
+          }).finally(() => {
+            this.loading = false;
+          });
+        }
       }
     });
   </script>
