@@ -27,7 +27,6 @@
       font-weight: 600;
       margin-bottom: 24px;
     }
-
     #password-cover {
       position: fixed;
       inset: 0;
@@ -38,7 +37,6 @@
       align-items: center;
       z-index: 9999;
     }
-
     .announcements {
       background: #f5f5f7;
       border-radius: 12px;
@@ -46,30 +44,25 @@
       margin-bottom: 40px;
       border: 1px solid #d2d2d7;
     }
-
     .announcement-item {
       margin-bottom: 16px;
       padding-bottom: 12px;
       border-bottom: 1px solid #d2d2d7;
     }
-
     .announcement-title {
       font-weight: 600;
       font-size: 18px;
       color: #0071e3;
     }
-
     .announcement-content {
       font-size: 16px;
       color: #3c3c4399;
       white-space: pre-wrap;
     }
-
     .announcement-date {
       font-size: 13px;
       color: #6e6e73;
     }
-
     .device-list {
       border: 1px solid #d2d2d7;
       border-radius: 16px;
@@ -79,30 +72,25 @@
       display: flex;
       flex-direction: column;
     }
-
     .device-card {
       padding: 20px 24px;
       border-bottom: 1px solid #e5e5ea;
       cursor: pointer;
       transition: background-color 0.2s;
     }
-
     .device-card:hover {
       background-color: #f2f2f7;
     }
-
     .device-name {
       font-weight: 600;
       font-size: 18px;
       color: #1d1d1f;
     }
-
     .device-location {
       font-size: 14px;
       color: #6e6e73;
       margin: 2px 0;
     }
-
     .device-note {
       font-size: 15px;
       color: #3c3c4399;
@@ -110,13 +98,20 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-
     .device-date {
       font-size: 13px;
       color: #6e6e73;
       margin-top: 6px;
     }
-
+    #password-error {
+      color: red;
+      margin-top: 8px;
+      margin-bottom: 8px;
+    }
+    .ann-edit-buttons {
+      margin-bottom: 12px;
+      text-align: right;
+    }
     @media (max-width: 700px) {
       .device-card {
         padding: 16px 20px;
@@ -136,35 +131,41 @@
   <div id="app">
     <div id="password-cover" v-if="!unlocked">
       <h2>请输入密码以查看内容</h2>
-      <el-input v-model="passwordInput" placeholder="请输入密码" show-password @keyup.enter.native="checkPassword" style="max-width: 300px; margin: 10px 0;" />
-      <div id="password-error" style="color: red; margin-bottom: 10px;">{{ passwordError }}</div>
+      <el-input v-model="passwordInput" placeholder="请输入密码" show-password @keyup.enter.native="checkPassword" />
+      <div id="password-error">{{ passwordError }}</div>
       <el-button type="primary" @click="checkPassword">确认</el-button>
     </div>
 
     <h1>设备管理系统</h1>
 
     <div class="announcements" v-if="announcements.length">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h2 style="margin: 0; font-size: 20px;">公告栏</h2>
-        <el-button size="mini" @click="startEdit" v-if="!editing">编辑</el-button>
-        <el-button size="mini" type="success" @click="saveAnnouncements" v-if="editing">保存</el-button>
-      </div>
-
-      <div v-if="editing">
-        <div v-for="(item, index) in announcements" :key="index" class="announcement-item">
-          <el-input v-model="item.title" placeholder="标题" style="margin-bottom: 8px;" />
-          <el-input type="textarea" :rows="2" v-model="item.content" placeholder="内容" />
-          <el-date-picker v-model="item.date" type="date" placeholder="选择日期" format="yyyy-MM-dd" value-format="yyyy-MM-dd" style="margin-top: 8px;" />
-          <el-divider></el-divider>
+      <div class="ann-edit-buttons">
+        <el-button v-if="!editing" type="text" @click="startEdit">编辑公告</el-button>
+        <div v-else>
+          <el-button type="primary" size="small" @click="saveAnnouncements">保存</el-button>
+          <el-button size="small" @click="cancelEdit">取消</el-button>
         </div>
-        <el-button type="primary" plain icon="el-icon-plus" @click="addAnnouncement">添加一条公告</el-button>
       </div>
 
-      <div v-else>
+      <div v-if="!editing">
         <div v-for="item in announcements" :key="item.date" class="announcement-item">
           <div class="announcement-title">{{ item.title }}</div>
           <div class="announcement-content">{{ item.content }}</div>
           <div class="announcement-date">{{ item.date }}</div>
+        </div>
+      </div>
+
+      <div v-else>
+        <div v-for="(item, index) in announcements" :key="index">
+          <div style="display: flex; gap: 12px; align-items: flex-start;">
+            <div style="flex: 1;">
+              <el-input v-model="item.title" placeholder="标题" style="margin-bottom: 8px;" />
+              <el-input type="textarea" :rows="2" v-model="item.content" placeholder="内容" />
+              <el-date-picker v-model="item.date" type="date" format="yyyy-MM-dd" value-format="yyyy-MM-dd" placeholder="选择日期" style="margin-top: 8px;" />
+            </div>
+            <el-button type="danger" icon="el-icon-delete" circle @click="deleteAnnouncement(index)"></el-button>
+          </div>
+          <el-divider></el-divider>
         </div>
       </div>
     </div>
@@ -180,6 +181,7 @@
   </div>
 
   <script>
+    // Firebase 初始化
     const firebaseConfig = {
       apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
       authDomain: "device-hub-5238.firebaseapp.com",
@@ -200,8 +202,9 @@
         passwordInput: "",
         passwordError: "",
         announcements: [],
-        devices: {},
+        originalAnnouncements: [],
         editing: false,
+        devices: {}
       },
       methods: {
         checkPassword() {
@@ -218,6 +221,7 @@
             this.announcements = Object.values(data)
               .sort((a, b) => new Date(b.date) - new Date(a.date))
               .slice(0, 3);
+            this.originalAnnouncements = JSON.parse(JSON.stringify(this.announcements));
           });
 
           db.ref("devices").once("value", snapshot => {
@@ -228,40 +232,30 @@
           window.location.href = `device.html?id=${id}`;
         },
         startEdit() {
-          this.$prompt('请输入编辑密码', '公告编辑', {
-            confirmButtonText: '确认',
-            cancelButtonText: '取消',
-            inputType: 'password',
-          }).then(({ value }) => {
-            if (value === '123456') {
-              this.editing = true;
-            } else {
-              this.$message.error('密码错误');
-            }
-          }).catch(() => {});
+          this.editing = true;
         },
-        addAnnouncement() {
-          if (this.announcements.length >= 3) {
-            this.$message.warning("最多只能有 3 条公告");
-            return;
-          }
-          this.announcements.push({
-            title: '',
-            content: '',
-            date: new Date().toISOString().substr(0, 10),
-          });
+        cancelEdit() {
+          this.editing = false;
+          this.announcements = JSON.parse(JSON.stringify(this.originalAnnouncements));
         },
         saveAnnouncements() {
           const updates = {};
-          this.announcements.forEach((a, index) => {
+          this.announcements.forEach((item, index) => {
             const key = `ann_${String(index + 1).padStart(3, '0')}`;
-            updates[key] = a;
+            updates[key] = item;
           });
-          db.ref("announcements").set(updates).then(() => {
-            this.$message.success("保存成功");
-            this.editing = false;
-            this.loadData();
+          db.ref("announcements").set(updates, error => {
+            if (error) {
+              this.$message.error("保存失败：" + error.message);
+            } else {
+              this.$message.success("公告保存成功");
+              this.editing = false;
+              this.originalAnnouncements = JSON.parse(JSON.stringify(this.announcements));
+            }
           });
+        },
+        deleteAnnouncement(index) {
+          this.announcements.splice(index, 1);
         }
       }
     });
