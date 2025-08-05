@@ -43,25 +43,13 @@
       padding: 24px;
       margin-bottom: 40px;
       border: 1px solid #d2d2d7;
+      position: relative;
     }
     .announcement-item {
       margin-bottom: 16px;
       padding-bottom: 12px;
       border-bottom: 1px solid #d2d2d7;
-    }
-    .announcement-title {
-      font-weight: 600;
-      font-size: 18px;
-      color: #0071e3;
-    }
-    .announcement-content {
-      font-size: 16px;
-      color: #3c3c4399;
-      white-space: pre-wrap;
-    }
-    .announcement-date {
-      font-size: 13px;
-      color: #6e6e73;
+      position: relative;
     }
     .device-list {
       border: 1px solid #d2d2d7;
@@ -103,14 +91,16 @@
       color: #6e6e73;
       margin-top: 6px;
     }
-    #password-error {
-      color: red;
-      margin-top: 8px;
-      margin-bottom: 8px;
+    .edit-controls {
+      margin-bottom: 10px;
     }
-    .ann-edit-buttons {
-      margin-bottom: 12px;
-      text-align: right;
+    .delete-button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      font-size: 14px;
+      color: red;
+      cursor: pointer;
     }
     @media (max-width: 700px) {
       .device-card {
@@ -138,35 +128,25 @@
 
     <h1>设备管理系统</h1>
 
-    <div class="announcements" v-if="announcements.length">
-      <div class="ann-edit-buttons">
-        <el-button v-if="!editing" type="text" @click="startEdit">编辑公告</el-button>
-        <div v-else>
-          <el-button type="primary" size="small" @click="saveAnnouncements">保存</el-button>
-          <el-button size="small" @click="cancelEdit">取消</el-button>
-        </div>
+    <div class="announcements">
+      <div class="edit-controls">
+        <el-button size="mini" type="primary" @click="toggleEdit">{{ isEditing ? '保存公告' : '编辑公告' }}</el-button>
+        <el-button size="mini" @click="addAnnouncement" v-if="isEditing">新增公告</el-button>
+        <el-button size="mini" @click="cancelEdit" v-if="isEditing">取消</el-button>
       </div>
 
-      <div v-if="!editing">
-        <div v-for="item in announcements" :key="item.date" class="announcement-item">
+      <div v-for="(item, index) in announcements" :key="item.id || index" class="announcement-item">
+        <div class="delete-button" v-if="isEditing" @click="deleteAnnouncement(index)">🗑 删除</div>
+        <template v-if="isEditing">
+          <el-input v-model="item.title" placeholder="标题" />
+          <el-input type="textarea" v-model="item.content" placeholder="内容" :autosize="{ minRows: 2, maxRows: 4 }" />
+          <el-date-picker v-model="item.date" type="date" placeholder="选择日期" format="yyyy-MM-dd" value-format="yyyy-MM-dd" />
+        </template>
+        <template v-else>
           <div class="announcement-title">{{ item.title }}</div>
           <div class="announcement-content">{{ item.content }}</div>
           <div class="announcement-date">{{ item.date }}</div>
-        </div>
-      </div>
-
-      <div v-else>
-        <div v-for="(item, index) in announcements" :key="index">
-          <div style="display: flex; gap: 12px; align-items: flex-start;">
-            <div style="flex: 1;">
-              <el-input v-model="item.title" placeholder="标题" style="margin-bottom: 8px;" />
-              <el-input type="textarea" :rows="2" v-model="item.content" placeholder="内容" />
-              <el-date-picker v-model="item.date" type="date" format="yyyy-MM-dd" value-format="yyyy-MM-dd" placeholder="选择日期" style="margin-top: 8px;" />
-            </div>
-            <el-button type="danger" icon="el-icon-delete" circle @click="deleteAnnouncement(index)"></el-button>
-          </div>
-          <el-divider></el-divider>
-        </div>
+        </template>
       </div>
     </div>
 
@@ -181,7 +161,6 @@
   </div>
 
   <script>
-    // Firebase 初始化
     const firebaseConfig = {
       apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
       authDomain: "device-hub-5238.firebaseapp.com",
@@ -201,14 +180,13 @@
         unlocked: false,
         passwordInput: "",
         passwordError: "",
+        isEditing: false,
         announcements: [],
-        originalAnnouncements: [],
-        editing: false,
-        devices: {}
+        devices: {},
       },
       methods: {
         checkPassword() {
-          if (this.passwordInput === "123456") {
+          if (this.passwordInput === "iamadmin") {
             this.unlocked = true;
             this.loadData();
           } else {
@@ -217,11 +195,9 @@
         },
         loadData() {
           db.ref("announcements").once("value", snapshot => {
-            const data = snapshot.val() || {};
-            this.announcements = Object.values(data)
-              .sort((a, b) => new Date(b.date) - new Date(a.date))
-              .slice(0, 3);
-            this.originalAnnouncements = JSON.parse(JSON.stringify(this.announcements));
+            const raw = snapshot.val() || {};
+            this.announcements = Object.entries(raw).map(([id, data]) => ({ id, ...data }))
+              .sort((a, b) => new Date(b.date) - new Date(a.date));
           });
 
           db.ref("devices").once("value", snapshot => {
@@ -231,27 +207,40 @@
         goToDetail(id) {
           window.location.href = `device.html?id=${id}`;
         },
-        startEdit() {
-          this.editing = true;
+        toggleEdit() {
+          if (!this.isEditing) {
+            const editPassword = prompt("请输入编辑密码");
+            if (editPassword !== "123456") {
+              this.$message.error("密码错误");
+              return;
+            }
+            this.isEditing = true;
+          } else {
+            const updates = {};
+            this.announcements.forEach(item => {
+              const id = item.id || db.ref("announcements").push().key;
+              updates[id] = {
+                title: item.title || "",
+                content: item.content || "",
+                date: item.date || "",
+              };
+            });
+            db.ref("announcements").set(updates).then(() => {
+              this.isEditing = false;
+              this.loadData();
+              this.$message.success("保存成功");
+            });
+          }
         },
         cancelEdit() {
-          this.editing = false;
-          this.announcements = JSON.parse(JSON.stringify(this.originalAnnouncements));
+          this.isEditing = false;
+          this.loadData();
         },
-        saveAnnouncements() {
-          const updates = {};
-          this.announcements.forEach((item, index) => {
-            const key = `ann_${String(index + 1).padStart(3, '0')}`;
-            updates[key] = item;
-          });
-          db.ref("announcements").set(updates, error => {
-            if (error) {
-              this.$message.error("保存失败：" + error.message);
-            } else {
-              this.$message.success("公告保存成功");
-              this.editing = false;
-              this.originalAnnouncements = JSON.parse(JSON.stringify(this.announcements));
-            }
+        addAnnouncement() {
+          this.announcements.unshift({
+            title: "",
+            content: "",
+            date: new Date().toISOString().split("T")[0]
           });
         },
         deleteAnnouncement(index) {
