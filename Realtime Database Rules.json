@@ -1,0 +1,13 @@
+{
+  "rules": {
+    "announcements": {
+      ".read": true,
+      ".write": true
+    },
+    "devices": {
+      ".read": true,
+      ".write": false  // 你可以按需设置是否允许写入设备信息
+    }
+  }
+}
+

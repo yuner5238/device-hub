@@ -1,0 +1,239 @@
+{
+  "announcements": {
+    "announcement_1_1754357956469": {
+      "content": "编辑公告",
+      "date": "2025-08-05",
+      "title": "1232144"
+    },
+    "announcement_2_1754357956469": {
+      "content": "系统将于8月10日凌晨1点至3点进行维护，期间无法访问。",
+      "date": "2025-08-01",
+      "title": "系统维护通知"
+    },
+    "announcement_3_1754357956469": {
+      "content": "新增智能空调设备，欢迎测试使用。",
+      "date": "2025-07-28",
+      "title": "新设备上线"
+    }
+  },
+  "devices": {
+    "ac_572048": {
+      "install_date": "2022-11-05",
+      "location": "会议室2楼",
+      "name": "会议室空调",
+      "notes": "定期清洗过滤网\n更新备注",
+      "purchase_date": "2022-11-01"
+    },
+    "ac_908412": {
+      "install_date": "2022-10-02",
+      "location": "员工区3楼",
+      "name": "员工办公室空调",
+      "notes": "噪音稍大",
+      "purchase_date": "2022-09-30"
+    },
+    "airpurifier_596341": {
+      "install_date": "2024-03-06",
+      "location": "办公区1楼",
+      "name": "办公室空气净化器",
+      "notes": "滤网更换提醒开启",
+      "purchase_date": "2024-03-05"
+    },
+    "cabinet_678901": {
+      "install_date": "2024-01-21",
+      "location": "办公区2楼",
+      "name": "文件柜",
+      "notes": "存储有序",
+      "purchase_date": "2024-01-20"
+    },
+    "camera_123456": {
+      "install_date": "2023-09-02",
+      "location": "前台",
+      "name": "前台监控摄像头",
+      "notes": "监控范围良好",
+      "purchase_date": "2023-09-01"
+    },
+    "camera_425980": {
+      "install_date": "2023-10-12",
+      "location": "仓库3号",
+      "name": "仓库监控摄像头",
+      "notes": "镜头有轻微污渍",
+      "purchase_date": "2023-10-10"
+    },
+    "chair_567890": {
+      "install_date": "2024-03-11",
+      "location": "员工区3楼",
+      "name": "办公椅",
+      "notes": "坐感舒适",
+      "purchase_date": "2024-03-10"
+    },
+    "dehumidifier_604731": {
+      "install_date": "2023-07-22",
+      "location": "仓库1号",
+      "name": "仓库除湿机",
+      "notes": "湿度控制正常",
+      "purchase_date": "2023-07-21"
+    },
+    "desk_456789": {
+      "install_date": "2024-03-11",
+      "location": "员工区3楼",
+      "name": "办公桌",
+      "notes": "使用正常",
+      "purchase_date": "2024-03-10"
+    },
+    "fax_345678": {
+      "install_date": "2022-05-22",
+      "location": "办公区1楼",
+      "name": "传真机",
+      "notes": "偶尔卡纸",
+      "purchase_date": "2022-05-20"
+    },
+    "firewall_012345": {
+      "install_date": "2023-01-06",
+      "location": "服务器机房",
+      "name": "防火墙设备",
+      "notes": "安全规则正常",
+      "purchase_date": "2023-01-05"
+    },
+    "fridge_319807": {
+      "install_date": "2023-05-16",
+      "location": "食堂厨房",
+      "name": "食堂冰箱",
+      "notes": "温控正常",
+      "purchase_date": "2023-05-15"
+    },
+    "fridge_430162": {
+      "install_date": "2023-03-17",
+      "location": "办公区1楼",
+      "name": "办公室冰箱",
+      "notes": "运行良好",
+      "purchase_date": "2023-03-15"
+    },
+    "kvm_789012": {
+      "install_date": "2023-03-02",
+      "location": "服务器机房",
+      "name": "KVM切换器",
+      "notes": "切换正常",
+      "purchase_date": "2023-03-01"
+    },
+    "microphone_012345": {
+      "install_date": "2024-01-06",
+      "location": "会议室1楼",
+      "name": "会议麦克风",
+      "notes": "拾音清晰",
+      "purchase_date": "2024-01-05"
+    },
+    "monitor_231674": {
+      "install_date": "2023-12-02",
+      "location": "前台",
+      "name": "前台电脑显示器",
+      "notes": "显示清晰",
+      "purchase_date": "2023-12-01"
+    },
+    "monitor_813209": {
+      "install_date": "2024-01-11",
+      "location": "前台",
+      "name": "前台显示器",
+      "note": "1234125521",
+      "notes": "色彩正常",
+      "purchase_date": "2024-01-10"
+    },
+    "nas_890123": {
+      "install_date": "2023-07-16",
+      "location": "服务器机房",
+      "name": "网络存储",
+      "notes": "存储空间充足",
+      "purchase_date": "2023-07-15"
+    },
+    "printer_765120": {
+      "install_date": "2024-02-19",
+      "location": "办公区2楼",
+      "name": "打印机",
+      "notes": "碳粉需及时更换",
+      "purchase_date": "2024-02-18"
+    },
+    "projector_123456": {
+      "install_date": "2023-08-12",
+      "location": "会议室1楼",
+      "name": "会议室投影仪",
+      "notes": "投影清晰，需定期清洁镜头",
+      "purchase_date": "2023-08-10"
+    },
+    "router_456789": {
+      "install_date": "2023-09-16",
+      "location": "办公区1楼",
+      "name": "网络路由器",
+      "notes": "信号稳定",
+      "purchase_date": "2023-09-15"
+    },
+    "scanner_234567": {
+      "install_date": "2024-01-06",
+      "location": "办公区2楼",
+      "name": "文档扫描仪",
+      "notes": "扫描速度正常",
+      "purchase_date": "2024-01-05"
+    },
+    "server_678901": {
+      "install_date": "2021-06-12",
+      "location": "服务器机房",
+      "name": "文件服务器",
+      "notes": "运行稳定，定期备份",
+      "purchase_date": "2021-06-10"
+    },
+    "shredder_789012": {
+      "install_date": "2023-11-06",
+      "location": "办公区1楼",
+      "name": "碎纸机",
+      "notes": "碎纸效果良好",
+      "purchase_date": "2023-11-05"
+    },
+    "soundbar_901234": {
+      "install_date": "2023-12-16",
+      "location": "会议室1楼",
+      "name": "电视音响条",
+      "notes": "音效良好",
+      "purchase_date": "2023-12-15"
+    },
+    "speaker_836751": {
+      "install_date": "2024-01-16",
+      "location": "会议室1楼",
+      "name": "会议室音响",
+      "notes": "音质清晰",
+      "purchase_date": "2024-01-15"
+    },
+    "switch_901234": {
+      "install_date": "2022-11-21",
+      "location": "办公区1楼",
+      "name": "网络交换机",
+      "notes": "端口工作正常",
+      "purchase_date": "2022-11-20"
+    },
+    "thermometer_234567": {
+      "install_date": "2023-06-16",
+      "location": "仓库1号",
+      "name": "仓库温湿度计",
+      "notes": "数据记录正常",
+      "purchase_date": "2023-06-15"
+    },
+    "tv_890123": {
+      "install_date": "2023-12-16",
+      "location": "会议室1楼",
+      "name": "会议室电视",
+      "notes": "画面清晰",
+      "purchase_date": "2023-12-15"
+    },
+    "ups_567890": {
+      "install_date": "2022-12-03",
+      "location": "服务器机房",
+      "name": "不间断电源",
+      "notes": "定期检测电池",
+      "purchase_date": "2022-12-01"
+    },
+    "whiteboard_345678": {
+      "install_date": "2024-02-02",
+      "location": "会议室2楼",
+      "name": "会议室白板",
+      "notes": "书写流畅",
+      "purchase_date": "2024-02-01"
+    }
+  }
+}

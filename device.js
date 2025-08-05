@@ -1,143 +1,177 @@
-// --- Firebase 配置与初始化 ---
-// !!! 请务必替换为你在 Firebase 控制台中找到的实际配置信息 !!!
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "device-hub-5238.firebaseapp.com",
-  databaseURL: "https://device-hub-5238-default-rtdb.firebaseio.com",
-  projectId: "device-hub-5238",
-  storageBucket: "device-hub-5238.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>设备详情</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+  <script src="https://unpkg.com/vue@3"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <!-- Firebase 兼容版 -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
-// 初始化 Firebase 应用
-firebase.initializeApp(firebaseConfig);
+  <style>
+    #app { max-width: 700px; margin: 30px auto; }
+    .info-row { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <el-card shadow="hover" style="padding: 20px;">
+    <el-page-header content="设备详情" @back="goHome" :show-back="true" style="margin-bottom: 20px;"></el-page-header>
 
-// 获取 Realtime Database 实例
-const database = firebase.database();
+    <div v-if="!loaded">
+      <el-skeleton rows="5" animated />
+    </div>
 
-// --- 常量与辅助函数 ---
-const EDIT_PASSWORD = "123456"; // 简单密码保护，强烈建议未来使用 Firebase Authentication
+    <div v-else>
+      <el-descriptions title="设备信息" :column="1" border>
+        <el-descriptions-item label="设备名称">{{ device.name || '无名设备' }}</el-descriptions-item>
+        <el-descriptions-item label="位置">
+          <template v-if="editMode">
+            <el-input v-model="editLocation" placeholder="请输入设备位置"></el-input>
+          </template>
+          <template v-else>{{ device.location || '未知' }}</template>
+        </el-descriptions-item>
+        <el-descriptions-item label="上次维护">{{ device.last_maintenance || '无' }}</el-descriptions-item>
+        <el-descriptions-item label="备注">
+          <template v-if="editMode">
+            <el-input type="textarea" :rows="4" v-model="editNotes" placeholder="请输入备注"></el-input>
+          </template>
+          <template v-else>{{ device.notes || '无' }}</template>
+        </el-descriptions-item>
+      </el-descriptions>
 
-function getDeviceIdFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("id");
-}
+      <div v-if="!editMode" style="margin-top: 20px; text-align: right;">
+        <el-button type="primary" @click="startEdit">编辑</el-button>
+        <el-button @click="goHome">主页</el-button>
+      </div>
 
-/**
- * 从 Firebase Realtime Database 获取单个设备数据
- * 假设你的设备数据结构是：
- * {
- *   "devices": {
- *     "device-id-1": { ...设备1数据... },
- *     "device-id-2": { ...设备2数据... }
- *   }
- * }
- */
-async function fetchDeviceData(deviceId) {
-  try {
-    const snapshot = await database.ref('devices/' + deviceId).once('value');
-    if (snapshot.exists()) {
-      const deviceData = snapshot.val();
-      // 为了兼容原来的 devices.json 结构（有 id 字段），这里手动添加 id
-      return { id: deviceId, ...deviceData };
-    } else {
-      console.warn("未找到设备ID:", deviceId);
-      return null;
-    }
-  } catch (error) {
-    console.error("从 Firebase 获取设备数据失败:", error);
-    alert("设备数据加载失败：" + error.message);
-    return null;
-  }
-}
+      <div v-else style="margin-top: 20px;">
+        <el-input
+          v-model="editPassword"
+          type="password"
+          placeholder="请输入编辑密码"
+          style="max-width: 300px; margin-bottom: 10px;"
+          @keyup.enter="saveEdit"
+        />
+        <div style="text-align: right;">
+          <el-button type="primary" @click="saveEdit">保存</el-button>
+          <el-button @click="cancelEdit">取消</el-button>
+        </div>
+      </div>
+    </div>
+  </el-card>
+</div>
 
-function showDeviceData(device) {
-  document.getElementById("deviceName").textContent = device.name || "未知设备"; // 假设设备数据中有name字段
-  document.getElementById("deviceLocation").textContent = device.location || "N/A";
-  document.getElementById("deviceMaintenance").textContent = device.last_maintenance || "N/A";
-  document.getElementById("deviceNotes").textContent = device.notes || "无";
-
-  // 填充编辑字段
-  document.getElementById("editLocation").value = device.location || "";
-  document.getElementById("editNotes").value = device.notes || "";
-}
-
-function toggleEditMode(editMode) {
-  document.querySelectorAll(".view-field").forEach(el => el.style.display = editMode ? "none" : "block");
-  document.querySelectorAll(".edit-field").forEach(el => el.style.display = editMode ? "block" : "none");
-  document.getElementById("btnEdit").style.display = editMode ? "none" : "block"; // 编辑模式下隐藏编辑按钮
-  document.getElementById("btnSaveDeviceInfo").style.display = editMode ? "block" : "none"; // 编辑模式下显示保存按钮
-}
-
-/**
- * 将更新后的设备数据保存到 Firebase Realtime Database
- */
-async function saveDeviceDataToFirebase(deviceId, updatedData) {
-  try {
-    // 使用 update 方法只更新指定字段，不会覆盖整个设备对象
-    await database.ref('devices/' + deviceId).update(updatedData);
-    console.log("设备信息已成功更新到 Firebase！");
-    alert("已成功更新设备信息！");
-    return true;
-  } catch (error) {
-    console.error("保存设备信息到 Firebase 失败:", error);
-    alert("保存失败：" + error.message);
-    return false;
-  }
-}
-
-
-// --- 初始化逻辑 ---
-async function init() {
-  const deviceId = getDeviceIdFromUrl();
-  if (!deviceId) {
-    alert("设备ID缺失，无法加载。请确保URL中包含 '?id=your-device-id' 参数。");
-    return;
-  }
-
-  const device = await fetchDeviceData(deviceId);
-  if (!device) {
-    alert("未找到对应设备信息或加载失败。");
-    return;
-  }
-
-  showDeviceData(device);
-  toggleEditMode(false); // 初始显示为查看模式
-
-  document.getElementById("btnEdit").onclick = () => {
-    toggleEditMode(true);
-    document.getElementById("inputEditPassword").value = ""; // 进入编辑模式时清空密码
+<script>
+  // Firebase 配置，替换成你自己的
+  const firebaseConfig = {
+    apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
+    authDomain: "device-hub-5238.firebaseapp.com",
+    databaseURL: "https://device-hub-5238-default-rtdb.firebaseio.com",
+    projectId: "device-hub-5238",
+    storageBucket: "device-hub-5238.firebasestorage.app",
+    messagingSenderId: "648686550801",
+    appId: "1:648686550801:web:2f460487e32914042316b0",
+    measurementId: "G-44L5PHN36Y"
   };
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
 
-  document.getElementById("btnSaveDeviceInfo").onclick = async () => {
-    const inputPwd = document.getElementById("inputEditPassword").value.trim();
-    if (!inputPwd) {
-      alert("请输入密码");
-      return;
+  const { createApp, ref, onMounted } = Vue;
+  const { ElMessage } = ElementPlus;
+
+  createApp({
+    setup() {
+      const device = ref({});
+      const loaded = ref(false);
+      const editMode = ref(false);
+      const editLocation = ref('');
+      const editNotes = ref('');
+      const editPassword = ref('');
+
+      // 读取 URL id
+      function getDeviceIdFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('id');
+      }
+
+      async function fetchDeviceData(id) {
+        try {
+          const snapshot = await database.ref('devices/' + id).once('value');
+          if (snapshot.exists()) {
+            device.value = snapshot.val();
+          } else {
+            ElMessage.error('未找到该设备');
+          }
+        } catch (e) {
+          ElMessage.error('加载设备失败：' + e.message);
+        } finally {
+          loaded.value = true;
+        }
+      }
+
+      function goHome() {
+        window.location.href = 'index.html';
+      }
+
+      function startEdit() {
+        editPassword.value = '';
+        editLocation.value = device.value.location || '';
+        editNotes.value = device.value.notes || '';
+        editMode.value = true;
+      }
+
+      async function saveEdit() {
+        if (editPassword.value !== 'bianji') {
+          ElMessage.error('编辑密码错误');
+          return;
+        }
+        try {
+          const deviceId = getDeviceIdFromUrl();
+          await database.ref('devices/' + deviceId).update({
+            location: editLocation.value.trim(),
+            notes: editNotes.value.trim()
+          });
+          ElMessage.success('设备信息已更新');
+          device.value.location = editLocation.value.trim();
+          device.value.notes = editNotes.value.trim();
+          editMode.value = false;
+          editPassword.value = '';
+        } catch (e) {
+          ElMessage.error('保存失败：' + e.message);
+        }
+      }
+
+      function cancelEdit() {
+        editMode.value = false;
+        editPassword.value = '';
+      }
+
+      onMounted(() => {
+        const id = getDeviceIdFromUrl();
+        if (!id) {
+          ElMessage.error('未传入设备ID');
+          return;
+        }
+        fetchDeviceData(id);
+      });
+
+      return {
+        device,
+        loaded,
+        editMode,
+        editLocation,
+        editNotes,
+        editPassword,
+        goHome,
+        startEdit,
+        saveEdit,
+        cancelEdit
+      };
     }
-    if (inputPwd !== EDIT_PASSWORD) {
-      alert("密码错误，无法保存");
-      return;
-    }
-
-    const updatedData = {
-      location: document.getElementById("editLocation").value.trim(),
-      notes: document.getElementById("editNotes").value.trim(),
-      // 你可以添加更多需要更新的字段
-      // 例如：name: document.getElementById("deviceName").value.trim(),
-    };
-
-    // 保存到 Firebase
-    const saveSuccess = await saveDeviceDataToFirebase(deviceId, updatedData);
-
-    if (saveSuccess) {
-      toggleEditMode(false);
-      // 保存成功后，从 Firebase 重新获取最新数据并显示
-      const refreshedDevice = await fetchDeviceData(deviceId);
-      if (refreshedDevice) showDeviceData(refreshedDevice);
-    }
-  };
-}
-
-window.onload = init;
+  }).use(ElementPlus).mount('#app');
+</script>
+</body>
+</html>
