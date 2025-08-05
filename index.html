@@ -136,18 +136,36 @@
   <div id="app">
     <div id="password-cover" v-if="!unlocked">
       <h2>请输入密码以查看内容</h2>
-      <el-input v-model="passwordInput" placeholder="请输入密码" show-password @keyup.enter.native="checkPassword" />
-      <div id="password-error">{{ passwordError }}</div>
+      <el-input v-model="passwordInput" placeholder="请输入密码" show-password @keyup.enter.native="checkPassword" style="max-width: 300px; margin: 10px 0;" />
+      <div id="password-error" style="color: red; margin-bottom: 10px;">{{ passwordError }}</div>
       <el-button type="primary" @click="checkPassword">确认</el-button>
     </div>
 
     <h1>设备管理系统</h1>
 
     <div class="announcements" v-if="announcements.length">
-      <div v-for="item in announcements" :key="item.date" class="announcement-item">
-        <div class="announcement-title">{{ item.title }}</div>
-        <div class="announcement-content">{{ item.content }}</div>
-        <div class="announcement-date">{{ item.date }}</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 style="margin: 0; font-size: 20px;">公告栏</h2>
+        <el-button size="mini" @click="startEdit" v-if="!editing">编辑</el-button>
+        <el-button size="mini" type="success" @click="saveAnnouncements" v-if="editing">保存</el-button>
+      </div>
+
+      <div v-if="editing">
+        <div v-for="(item, index) in announcements" :key="index" class="announcement-item">
+          <el-input v-model="item.title" placeholder="标题" style="margin-bottom: 8px;" />
+          <el-input type="textarea" :rows="2" v-model="item.content" placeholder="内容" />
+          <el-date-picker v-model="item.date" type="date" placeholder="选择日期" format="yyyy-MM-dd" value-format="yyyy-MM-dd" style="margin-top: 8px;" />
+          <el-divider></el-divider>
+        </div>
+        <el-button type="primary" plain icon="el-icon-plus" @click="addAnnouncement">添加一条公告</el-button>
+      </div>
+
+      <div v-else>
+        <div v-for="item in announcements" :key="item.date" class="announcement-item">
+          <div class="announcement-title">{{ item.title }}</div>
+          <div class="announcement-content">{{ item.content }}</div>
+          <div class="announcement-date">{{ item.date }}</div>
+        </div>
       </div>
     </div>
 
@@ -162,7 +180,6 @@
   </div>
 
   <script>
-    // Firebase 初始化
     const firebaseConfig = {
       apiKey: "AIzaSyAiNEktrGgrjNfgpHVA6q1aBtDoZ6c5fMM",
       authDomain: "device-hub-5238.firebaseapp.com",
@@ -184,6 +201,7 @@
         passwordError: "",
         announcements: [],
         devices: {},
+        editing: false,
       },
       methods: {
         checkPassword() {
@@ -195,7 +213,6 @@
           }
         },
         loadData() {
-          // 加载公告
           db.ref("announcements").once("value", snapshot => {
             const data = snapshot.val() || {};
             this.announcements = Object.values(data)
@@ -203,13 +220,48 @@
               .slice(0, 3);
           });
 
-          // 加载设备
           db.ref("devices").once("value", snapshot => {
             this.devices = snapshot.val() || {};
           });
         },
         goToDetail(id) {
           window.location.href = `device.html?id=${id}`;
+        },
+        startEdit() {
+          this.$prompt('请输入编辑密码', '公告编辑', {
+            confirmButtonText: '确认',
+            cancelButtonText: '取消',
+            inputType: 'password',
+          }).then(({ value }) => {
+            if (value === '123456') {
+              this.editing = true;
+            } else {
+              this.$message.error('密码错误');
+            }
+          }).catch(() => {});
+        },
+        addAnnouncement() {
+          if (this.announcements.length >= 3) {
+            this.$message.warning("最多只能有 3 条公告");
+            return;
+          }
+          this.announcements.push({
+            title: '',
+            content: '',
+            date: new Date().toISOString().substr(0, 10),
+          });
+        },
+        saveAnnouncements() {
+          const updates = {};
+          this.announcements.forEach((a, index) => {
+            const key = `ann_${String(index + 1).padStart(3, '0')}`;
+            updates[key] = a;
+          });
+          db.ref("announcements").set(updates).then(() => {
+            this.$message.success("保存成功");
+            this.editing = false;
+            this.loadData();
+          });
         }
       }
     });
